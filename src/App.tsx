@@ -10,59 +10,64 @@ import {
   TerminalSquare, Gamepad2, BrainCircuit, Activity,
   Play, Square, RotateCcw, Wrench, HardDrive, FileTerminal, Database, User, Users, Send, Loader2,
   MousePointer2, Target, Gift, Store, MapPin, ArrowLeft, Trash2, Link, CheckCircle, Clock,
-  Swords, Crown, ShoppingCart, Flag, TrendingUp, Map, Megaphone, Eye, EyeOff, ServerCrash, FileText, PieChart, Info, ShieldAlert
+  Swords, Crown, ShoppingCart, Flag, TrendingUp, Map, Megaphone, Eye, EyeOff, ServerCrash, FileText, PieChart, Info, ShieldAlert,
+  Globe
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { GoogleGenAI } from '@google/genai';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Box as ThreeBox, Text, Environment, ContactShadows, Float, useGLTF } from '@react-three/drei';
 import AIAssistant from './components/AIAssistant';
+import { i18n, Language } from './i18n';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [serverState, setServerState] = useState<'offline' | 'starting' | 'online'>('offline');
+  const [language, setLanguage] = useState<Language>('pt');
+
+  const t = i18n[language];
 
   const navGroups = [
     {
-      title: 'Monitoramento & Gerenciamento',
+      title: t.sidebar.monitoring,
       items: [
-        { id: 'dashboard', label: 'Painel Central', icon: Activity },
-        { id: 'logs', label: 'Console em Tempo Real', icon: FileText },
-        { id: 'server', label: 'Servidor & Rotinas', icon: Server },
-        { id: 'economy', label: 'Economia & Drops', icon: TrendingUp },
-        { id: 'players', label: 'Contas & Inventário', icon: Users },
-        { id: 'security', label: 'Firewall & AntiHack', icon: Shield },
+        { id: 'dashboard', label: t.sidebar.dashboard, icon: Activity },
+        { id: 'logs', label: t.sidebar.logs, icon: FileText },
+        { id: 'server', label: t.sidebar.server, icon: Server },
+        { id: 'economy', label: t.sidebar.economy, icon: TrendingUp },
+        { id: 'players', label: t.sidebar.players, icon: Users },
+        { id: 'security', label: t.sidebar.security, icon: Shield },
       ]
     },
     {
-      title: 'Desenvolvimento',
+      title: t.sidebar.development,
       items: [
-        { id: 'tools', label: 'Editores Visuais', icon: Wrench },
-        { id: 'events', label: 'Horários / Eventos', icon: Clock },
-        { id: 'config', label: 'Arquivos .INI', icon: FileTerminal },
-        { id: 'database', label: 'Banco de Dados SQL', icon: Database },
-        { id: 'ai', label: 'Assistente IA (Logs)', icon: BrainCircuit },
+        { id: 'tools', label: t.sidebar.tools, icon: Wrench },
+        { id: 'events', label: t.sidebar.events, icon: Clock },
+        { id: 'config', label: t.sidebar.config, icon: FileTerminal },
+        { id: 'database', label: t.sidebar.database, icon: Database },
+        { id: 'ai', label: t.sidebar.ai, icon: BrainCircuit },
       ]
     },
     {
-      title: 'Sistemas In-Game',
+      title: t.sidebar.systems,
       items: [
-        { id: 'siege', label: 'Castle Siege', icon: Flag },
-        { id: 'guilds', label: 'Guilds & Alianças', icon: Swords },
-        { id: 'vip', label: 'Gerenciador VIP', icon: Crown },
-        { id: 'cashshop', label: 'Cash Shop (Loja X)', icon: ShoppingCart },
-        { id: 'spots', label: 'Mapas & Spots', icon: Map },
-        { id: 'shops', label: 'Lojas NPCs', icon: Store },
+        { id: 'siege', label: t.sidebar.siege, icon: Flag },
+        { id: 'guilds', label: t.sidebar.guilds, icon: Swords },
+        { id: 'vip', label: t.sidebar.vip, icon: Crown },
+        { id: 'cashshop', label: t.sidebar.cashshop, icon: ShoppingCart },
+        { id: 'spots', label: t.sidebar.spots, icon: Map },
+        { id: 'shops', label: t.sidebar.shops, icon: Store },
       ]
     },
     {
-      title: 'Cloud & Deploy',
+      title: t.sidebar.cloud,
       items: [
-        { id: 'downloads', label: 'Explorador Web', icon: Download },
-        { id: 'bridge', label: 'Nodes, VPS & Setup', icon: Target },
-        { id: 'webclient', label: 'Jogar no Browser', icon: Gamepad2 },
+        { id: 'downloads', label: t.sidebar.explorer, icon: Download },
+        { id: 'bridge', label: t.sidebar.setup, icon: Target },
+        { id: 'webclient', label: t.sidebar.browser, icon: Gamepad2 },
       ]
     }
   ];
@@ -140,10 +145,10 @@ export default function App() {
           ))}
         </nav>
         
-        <div className="p-4 border-t border-[#1e2126]">
+        <div className="p-4 border-t border-[#1e2126] space-y-4">
           <div className="bg-[#15171a] p-4 rounded-xl border border-[#1e2126]">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.header.status}</span>
               <span className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor]
                 ${serverState === 'online' ? 'bg-green-500 text-green-500' : 
                   serverState === 'starting' ? 'bg-yellow-500 text-yellow-500 animate-pulse' : 
@@ -175,6 +180,14 @@ export default function App() {
                </button>
             </div>
           </div>
+          
+          <button 
+            onClick={() => setLanguage(language === 'pt' ? 'en' : 'pt')}
+            className="w-full flex items-center justify-center gap-2 bg-[#15171a] hover:bg-[#1e2126] border border-[#1e2126] text-slate-400 hover:text-white px-3 py-2 rounded-xl transition-colors font-medium text-xs"
+          >
+            <Globe size={14} />
+            {language === 'pt' ? 'EN (English)' : 'PT-BR (Português)'}
+          </button>
         </div>
       </div>
 
@@ -186,7 +199,7 @@ export default function App() {
             <div className="flex items-center gap-4">
                <div className="bg-[#1e2126] text-slate-300 text-xs px-3 py-1.5 rounded-full font-mono flex items-center gap-2">
                  <Server size={12} className={serverState === 'online' ? 'text-green-500' : 'text-red-500'} />
-                 {serverState === 'online' ? '128 Players Online' : 'Server Offline'}
+                 {serverState === 'online' ? '128 ' + t.dashboard.online : 'Server ' + t.dashboard.offline}
                </div>
                <div className="text-xs text-slate-500 font-mono">
                  RAM: {serverState === 'online' ? '4.2GB / 8GB' : '0GB / 8GB'}
@@ -220,7 +233,7 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="h-full"
             >
-              {activeTab === 'dashboard' && <DashboardView setActiveTab={setActiveTab} serverState={serverState} />}
+              {activeTab === 'dashboard' && <DashboardView setActiveTab={setActiveTab} serverState={serverState} language={language} />}
               {activeTab === 'logs' && <LogsView />}
               {activeTab === 'economy' && <EconomyView />}
               {activeTab === 'players' && <PlayersView />}
@@ -234,7 +247,7 @@ export default function App() {
               {activeTab === 'shops' && <ShopsView />}
               {activeTab === 'webclient' && <WebClientView />}
               {activeTab === 'downloads' && <DownloadsView />}
-              {activeTab === 'bridge' && <SetupView />}
+              {activeTab === 'bridge' && <SetupView language={language} />}
               {activeTab === 'server' && <ServerManagerView serverState={serverState} />}
               {activeTab === 'tools' && <ToolsView />}
               {activeTab === 'config' && <ConfigView />}
@@ -372,9 +385,10 @@ function WebClientView() {
   );
 }
 
-function DashboardView({ setActiveTab, serverState }: { setActiveTab: (tab: string) => void, serverState: string }) {
+function DashboardView({ setActiveTab, serverState, language }: { setActiveTab: (tab: string) => void, serverState: string, language: Language }) {
   const isOnline = serverState === 'online';
   const isStarting = serverState === 'starting';
+  const t = i18n[language];
 
   const [hostInfo, setHostInfo] = useState({ os: 'Carregando...', cpu: '...', storage: '...', ram: '...' });
   const [muServerPath, setMuServerPath] = useState("");
@@ -425,18 +439,18 @@ function DashboardView({ setActiveTab, serverState }: { setActiveTab: (tab: stri
     <div className="space-y-6">
       <header className="mb-6">
         <h2 className="text-3xl font-bold text-white tracking-tight flex gap-2 items-center">
-           Painel Central 
-           {dbStats.totalAccounts > 0 && <span className="bg-orange-500/20 text-orange-500 text-[10px] px-2 py-1 rounded tracking-widest uppercase">Live DB</span>}
+           {t.dashboard.title} 
+           {dbStats.totalAccounts > 0 && <span className="bg-orange-500/20 text-orange-500 text-[10px] px-2 py-1 rounded tracking-widest uppercase">{t.dashboard.liveDb}</span>}
         </h2>
-        <p className="text-slate-400 mt-1">Visão geral do seu servidor de Mu Online e serviços do painel.</p>
+        <p className="text-slate-400 mt-1">{t.dashboard.subtitle}</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Jogadores Online', value: isOnline ? dbStats.onlinePlayers : 'OFFLINE', icon: User, color: 'text-orange-500' },
-          { label: 'Contas Criadas', value: isOnline ? dbStats.totalAccounts : '0', icon: Activity, color: 'text-blue-500' },
-          { label: 'Personagens / Guilds', value: isOnline ? `${dbStats.totalCharacters} / ${dbStats.totalGuilds}` : 'OFFLINE', icon: Users, color: 'text-green-500' },
-          { label: 'Erros Recentes', value: isOnline ? '0' : '0', icon: ServerCrash, color: 'text-red-500' },
+          { label: t.dashboard.online, value: isOnline ? dbStats.onlinePlayers : t.dashboard.offline, icon: User, color: 'text-orange-500' },
+          { label: t.dashboard.accounts, value: isOnline ? dbStats.totalAccounts : '0', icon: Activity, color: 'text-blue-500' },
+          { label: t.dashboard.chars, value: isOnline ? `${dbStats.totalCharacters} / ${dbStats.totalGuilds}` : t.dashboard.offline, icon: Users, color: 'text-green-500' },
+          { label: t.dashboard.errors, value: isOnline ? '0' : '0', icon: ServerCrash, color: 'text-red-500' },
         ].map((stat, i) => (
           <div key={i} className="bg-[#111317] border border-[#1e2126] rounded-2xl p-5 hover:border-orange-500/30 transition-colors flex flex-col justify-between">
             <div className="flex justify-between items-center mb-4">
@@ -452,7 +466,7 @@ function DashboardView({ setActiveTab, serverState }: { setActiveTab: (tab: stri
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-[#111317] border border-[#1e2126] rounded-2xl p-6">
-           <h3 className="font-bold text-white mb-6 uppercase text-xs tracking-widest flex items-center gap-2"><TrendingUp size={14} className="text-orange-500"/> Tráfego e Jogadores (Últimas 24h)</h3>
+           <h3 className="font-bold text-white mb-6 uppercase text-xs tracking-widest flex items-center gap-2"><TrendingUp size={14} className="text-orange-500"/> {t.dashboard.traffic}</h3>
            <div className="h-[300px] w-full">
              <ResponsiveContainer width="100%" height="100%">
                <AreaChart data={chartData}>
@@ -473,18 +487,18 @@ function DashboardView({ setActiveTab, serverState }: { setActiveTab: (tab: stri
         </div>
 
         <div className="bg-[#111317] border border-[#1e2126] rounded-2xl p-6 flex flex-col">
-          <h3 className="font-bold text-white mb-6 uppercase text-xs tracking-widest flex items-center gap-2"><Server size={14} className="text-blue-500"/> Informações do Host</h3>
+          <h3 className="font-bold text-white mb-6 uppercase text-xs tracking-widest flex items-center gap-2"><Server size={14} className="text-blue-500"/> {t.dashboard.hostInfo}</h3>
           <div className="space-y-4 flex-1">
              <div className="bg-[#0a0b0d] p-4 rounded-xl border border-[#1e2126]">
-                <div className="text-xs text-slate-500 mb-1">Sistema Operacional</div>
+                <div className="text-xs text-slate-500 mb-1">{t.dashboard.os}</div>
                 <div className="text-sm text-white font-mono flex items-center gap-2"><Shield size={14}/> {hostInfo.os}</div>
              </div>
              <div className="bg-[#0a0b0d] p-4 rounded-xl border border-[#1e2126]">
-                <div className="text-xs text-slate-500 mb-1">Processador (CPU)</div>
+                <div className="text-xs text-slate-500 mb-1">{t.dashboard.cpu}</div>
                 <div className="text-sm text-white font-mono flex items-center gap-2"><BrainCircuit size={14}/> {hostInfo.cpu}</div>
              </div>
              <div className="bg-[#0a0b0d] p-4 rounded-xl border border-[#1e2126]">
-                <div className="text-xs text-slate-500 mb-1">Armazenamento NVMe</div>
+                <div className="text-xs text-slate-500 mb-1">{t.dashboard.storage}</div>
                 <div className="text-sm text-white font-mono flex items-center gap-2"><HardDrive size={14}/> {hostInfo.storage}</div>
              </div>
           </div>
@@ -856,7 +870,7 @@ function ShopsView() {
   );
 }
 
-function SetupView() {
+function SetupView({ language }: { language: Language }) {
   const [muServerPath, setMuServerPath] = useState("");
   const [connectionMode, setConnectionMode] = useState<'local' | 'remote'>('local');
   const [sshConfig, setSshConfig] = useState({ host: '', port: 22, username: 'Administrator', password: '' });
@@ -867,6 +881,8 @@ function SetupView() {
   const [sqlQuery, setSqlQuery] = useState("CREATE TABLE Character (Name VARCHAR(50), Class INT, cLevel INT, MapNumber INT, MapPosX INT, MapPosY INT, CtlCode INT, AccountID VARCHAR(50));");
   const [isExecutingDb, setIsExecutingDb] = useState(false);
   const [dbResult, setDbResult] = useState<any>(null);
+
+  const t = i18n[language];
 
   useEffect(() => {
     fetch('/api/config')
@@ -937,17 +953,17 @@ function SetupView() {
       <header className="mb-6 flex justify-between items-end">
         <div>
            <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-             Setup & Instalação <span className="bg-orange-500/20 text-orange-500 text-[10px] px-2 py-1 rounded tracking-widest uppercase">WSL/Windows DB</span>
+             {t.setup.title} <span className="bg-orange-500/20 text-orange-500 text-[10px] px-2 py-1 rounded tracking-widest uppercase">WSL/Windows DB</span>
            </h2>
-           <p className="text-slate-400 mt-1 max-w-3xl">Gere a estrutura de pastas real no seu sistema, inicialize bancos de dados MSSQL e execute scripts SQL (como DbBackups ou MuOnline.sql).</p>
+           <p className="text-slate-400 mt-1 max-w-3xl">{t.setup.subtitle}</p>
         </div>
       </header>
       
       <div className="bg-[#111317] border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.05)] rounded-2xl p-6 mb-6">
-        <h3 className="font-bold text-white uppercase text-sm tracking-widest mb-4 flex items-center gap-2">Configuração de Ambiente (Local vs Cloud VPS)</h3>
+        <h3 className="font-bold text-white uppercase text-sm tracking-widest mb-4 flex items-center gap-2">{t.setup.envConfig}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2 block">Caminho (MuServerPath)</label>
+            <label className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2 block">{t.setup.pathLabel}</label>
             <input 
                type="text" 
                className="w-full bg-[#050506] border border-[#1e2126] text-white text-sm font-mono p-3 rounded-lg focus:outline-none focus:border-blue-500" 
@@ -955,36 +971,36 @@ function SetupView() {
                onChange={e => setMuServerPath(e.target.value)} 
                placeholder="C:\MuServer ou /home/pi/PaperMu"
             />
-            <p className="text-[10px] text-slate-500 mt-2">Dica: C:\MuServer (Windows) | /mnt/c/MuServer (WSL) | /home/pi/PaperMu (Orange Pi/ARM)</p>
+            <p className="text-[10px] text-slate-500 mt-2">{t.setup.pathHint}</p>
           </div>
           <div>
-             <label className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2 block">Modo de Conexão com o Host</label>
+             <label className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2 block">{t.setup.connMode}</label>
              <div className="flex gap-2">
                 <button onClick={() => setConnectionMode('local')} className={`flex-1 py-3 px-4 rounded-lg font-bold text-[11px] transition-all border ${connectionMode === 'local' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'bg-[#050506] text-slate-400 border-[#1e2126]'}`}>
-                   Nativo Node.js (fs)
+                   {t.setup.localNode}
                 </button>
                 <button onClick={() => setConnectionMode('remote')} className={`flex-1 py-3 px-4 rounded-lg font-bold text-[11px] transition-all border ${connectionMode === 'remote' ? 'bg-orange-500/20 text-orange-400 border-orange-500/50' : 'bg-[#050506] text-slate-400 border-[#1e2126]'}`}>
-                   Remoto OpenSSH VPS
+                   {t.setup.remoteSsh}
                 </button>
              </div>
              <div className="flex bg-green-500/10 border border-green-500/20 rounded p-2 mt-2 gap-2 text-xs text-green-400">
                <span>💡</span>
-               <p>Também suportamos placas embarcadas ARM (<b>Raspberry Pi, Orange Pi</b>) e AWS graviton rodando OpenMU ou repacks cross-platform via SSH.</p>
+               <p dangerouslySetInnerHTML={{ __html: t.setup.armHint }}></p>
              </div>
           </div>
         </div>
 
         {connectionMode === 'remote' && (
           <div className="mt-4 p-4 bg-[#050506] border border-orange-500/30 rounded-xl grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div><label className="text-xs text-slate-500 block mb-1">Host/IP da VPS</label><input type="text" value={sshConfig.host} onChange={e => setSshConfig({...sshConfig, host: e.target.value})} className="w-full bg-[#1e2126] border-none rounded p-2 text-white text-xs" /></div>
-            <div><label className="text-xs text-slate-500 block mb-1">Porta SSH</label><input type="number" value={sshConfig.port} onChange={e => setSshConfig({...sshConfig, port: Number(e.target.value)})} className="w-full bg-[#1e2126] border-none rounded p-2 text-white text-xs" /></div>
-            <div><label className="text-xs text-slate-500 block mb-1">Usuário / Login</label><input type="text" value={sshConfig.username} onChange={e => setSshConfig({...sshConfig, username: e.target.value})} className="w-full bg-[#1e2126] border-none rounded p-2 text-white text-xs" /></div>
-            <div><label className="text-xs text-slate-500 block mb-1">Senha (Oculta na API)</label><input type="password" value={sshConfig.password} onChange={e => setSshConfig({...sshConfig, password: e.target.value})} className="w-full bg-[#1e2126] border-none rounded p-2 text-white text-xs" placeholder="••••••••" /></div>
+            <div><label className="text-xs text-slate-500 block mb-1">{t.setup.vpsHost}</label><input type="text" value={sshConfig.host} onChange={e => setSshConfig({...sshConfig, host: e.target.value})} className="w-full bg-[#1e2126] border-none rounded p-2 text-white text-xs" /></div>
+            <div><label className="text-xs text-slate-500 block mb-1">{t.setup.sshPort}</label><input type="number" value={sshConfig.port} onChange={e => setSshConfig({...sshConfig, port: Number(e.target.value)})} className="w-full bg-[#1e2126] border-none rounded p-2 text-white text-xs" /></div>
+            <div><label className="text-xs text-slate-500 block mb-1">{t.setup.sshUser}</label><input type="text" value={sshConfig.username} onChange={e => setSshConfig({...sshConfig, username: e.target.value})} className="w-full bg-[#1e2126] border-none rounded p-2 text-white text-xs" /></div>
+            <div><label className="text-xs text-slate-500 block mb-1">{t.setup.sshPass}</label><input type="password" value={sshConfig.password} onChange={e => setSshConfig({...sshConfig, password: e.target.value})} className="w-full bg-[#1e2126] border-none rounded p-2 text-white text-xs" placeholder="••••••••" /></div>
           </div>
         )}
         
         <button onClick={saveConfig} disabled={isSavingConfig} className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition-colors disabled:opacity-50">
-            {isSavingConfig ? 'SALVANDO...' : 'SALVAR CONFIGURAÇÃO DE AMBIENTE'}
+            {isSavingConfig ? t.setup.saving : t.setup.saveConfig}
         </button>
       </div>
 
@@ -993,13 +1009,13 @@ function SetupView() {
          <div className="bg-[#111317] border border-[#1e2126] rounded-2xl p-6 flex flex-col">
             <h3 className="font-bold text-white uppercase text-sm tracking-widest mb-4 flex items-center gap-2">
                <span className="p-2 bg-[#1e2126] aspect-square rounded-md text-green-500"><TerminalSquare size={18} /></span>
-               Estrutura de Pastas
+               {t.setup.folders}
             </h3>
-            <p className="text-sm text-slate-400 mb-6">Ao clicar, o painel irá acessar nativamente (via Node env) seu caminho <code>{muServerPath}</code> e criar toda a árvore de diretórios necessária para rodar o MuServer (DataServer, ConnectServer, Titan, etc).</p>
+            <p className="text-sm text-slate-400 mb-6" dangerouslySetInnerHTML={{ __html: t.setup.foldersDesc.replace('{path}', `<code>${muServerPath}</code>`) }}></p>
 
             <div className="bg-[#050506] border border-[#1e2126] p-4 rounded-xl flex-1 mb-4 overflow-auto max-h-[150px] font-mono text-[10px] text-slate-400">
                {installLogs.length === 0 ? (
-                  <span className="text-slate-600">Aguardando comando de instalação...</span>
+                  <span className="text-slate-600">{t.setup.waitInstall}</span>
                ) : (
                   installLogs.map((log, i) => <div key={i} className={log.includes('[ERROR]') ? 'text-red-400' : log.includes('SUCCESS') ? 'text-green-400' : 'text-slate-400'}>{log}</div>)
                )}
@@ -1010,7 +1026,7 @@ function SetupView() {
                disabled={isInstalling}
                className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg text-sm transition-colors disabled:opacity-50"
             >
-               {isInstalling ? 'CRIANDO PASTAS...' : 'GERAR ESTRUTURA FÍSICA NA VIRTUAL/C:'}
+               {isInstalling ? t.setup.creating : t.setup.createFolders}
             </button>
          </div>
 
@@ -1018,9 +1034,9 @@ function SetupView() {
          <div className="bg-[#111317] border border-[#1e2126] rounded-2xl p-6 flex flex-col">
             <h3 className="font-bold text-white uppercase text-sm tracking-widest mb-4 flex items-center gap-2">
                <span className="p-2 bg-[#1e2126] aspect-square rounded-md text-blue-500"><Database size={18} /></span>
-               Script Manager MSSQL
+               {t.setup.sqlScript}
             </h3>
-            <p className="text-sm text-slate-400 mb-4">Execute restores, crie tabelas padrão de Mu Online (MeMB_INFO, Character, etc) na database configurada em <b>Contas & Personagens</b>.</p>
+            <p className="text-sm text-slate-400 mb-4">{t.setup.sqlDesc}</p>
 
             <textarea 
                value={sqlQuery}
@@ -1040,7 +1056,7 @@ function SetupView() {
                disabled={isExecutingDb}
                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition-colors disabled:opacity-50 mt-auto"
             >
-               {isExecutingDb ? 'EXECUTANDO SCRIPT...' : 'RODAR SCRIPT .SQL NO BANCO'}
+               {isExecutingDb ? t.setup.executing : t.setup.runSql}
             </button>
          </div>
       </div>
