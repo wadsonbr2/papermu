@@ -295,6 +295,44 @@ async function startServer() {
      }
   });
 
+  app.post("/api/install/sql", async (req, res) => {
+     const { saPassword, os: targetOs, method } = req.body;
+     
+     if (!saPassword || saPassword.length < 8) {
+         return res.status(400).json({ error: "A senha do SA precisa ter no mínimo 8 caracteres." });
+     }
+
+     try {
+         let cmd = "";
+         const isWin = targetOs === 'windows' || (targetOs === 'auto' && os.platform() === 'win32');
+         const isDocker = method === 'docker';
+
+         if (isDocker) {
+            cmd = `docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=${saPassword}" -p 1433:1433 --name mssql-server-mu -d mcr.microsoft.com/mssql/server:2019-latest`;
+         } else if (isWin) {
+            // Usa o Invoke-WebRequest para baixar o SQL Express e rodar silencioso
+            cmd = `powershell -Command "Write-Output 'Downloading SQL Express...'; Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/?linkid=866658' -OutFile 'sqlexpress.exe'; Write-Output 'Installing SQL Express Silently...'; Start-Process -Wait -FilePath '.\\sqlexpress.exe' -ArgumentList '/q', '/ACTION=Install', '/FEATURES=SQLEngine', '/INSTANCENAME=SQLEXPRESS', '/SQLSVCACCOUNT=\\"NT AUTHORITY\\Network Service\\"', '/SQLSYSADMINACCOUNTS=\\"BUILTIN\\ADMINISTRATORS\\"', '/AGTSVCACCOUNT=\\"NT AUTHORITY\\Network Service\\"', '/IACCEPTSQLSERVERLICENSETERMS', '/SECURITYMODE=SQL', '/SAPWD=\\"${saPassword}\\"' -NoNewWindow"`;
+         } else {
+            // Linux Apt
+            cmd = `wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add - && sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/20.04/mssql-server-2019.list)" && sudo apt-get update && sudo apt-get install -y mssql-server && sudo MSSQL_SA_PASSWORD="${saPassword}" ACCEPT_EULA="Y" /opt/mssql/bin/mssql-conf -n setup`;
+         }
+
+         if (connectionMode === 'remote') {
+            await executeRemote(cmd);
+            return res.json({ success: true, message: "Comando de instalação SQL executado com sucesso no nó remoto." });
+         } else {
+            exec(cmd, (err, stdout, stderr) => {
+                if (err) {
+                    return res.status(500).json({ error: err.message, stderr, stdout });
+                }
+                res.json({ success: true, message: `SQL Server Instalado localmente com sucesso!`, stdout });
+            });
+         }
+     } catch(e: any) {
+         res.status(500).json({ error: e.message });
+     }
+  });
+
   // Config API
   app.get("/api/config", (req, res) => {
     res.json({ muServerPath, connectionMode, sshConfig: { ...sshConfig, password: '' } });
