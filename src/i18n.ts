@@ -15,6 +15,7 @@ export const i18n = {
       tools: 'Editores Visuais',
       events: 'Horários / Eventos',
       config: 'Arquivos .INI',
+      source: 'Source C++/Java',
       database: 'Banco de Dados SQL',
       ai: 'Assistente IA (Logs)',
       systems: 'Sistemas In-Game',
@@ -47,7 +48,8 @@ export const i18n = {
       cpu: 'Processador (CPU)',
       ram: 'Memória RAM',
       storage: 'Armazenamento',
-      offline: 'OFFLINE'
+      offline: 'OFFLINE',
+      liveDb: 'LIVE DB'
     },
     setup: {
       title: 'Setup & Instalação',
@@ -90,6 +92,7 @@ export const i18n = {
       tools: 'Visual Editors',
       events: 'Schedules / Events',
       config: '.INI Files',
+      source: 'Source C++/Java',
       database: 'SQL Database',
       ai: 'AI Assistant (Logs)',
       systems: 'In-Game Systems',
@@ -122,7 +125,8 @@ export const i18n = {
       cpu: 'Processor (CPU)',
       ram: 'RAM Memory',
       storage: 'Storage',
-      offline: 'OFFLINE'
+      offline: 'OFFLINE',
+      liveDb: 'LIVE DB'
     },
     setup: {
       title: 'Setup & Installation',

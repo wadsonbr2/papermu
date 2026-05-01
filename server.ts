@@ -107,6 +107,52 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // Real download and install endpoint
+  app.post("/api/install-repack", async (req, res) => {
+      const { link, title } = req.body;
+      if (!link) return res.status(400).json({ error: "Missing link" });
+
+      try {
+          // If it's remote, we'd execute via SSH. Here we'd assume local or WSL.
+          // Since GDrive folders are hard to download directly via curl without auth,
+          // we use generic clone/download behavior for URLs ending in .zip or github repos.
+          let cmd = '';
+          const isWin = os.platform() === 'win32';
+          
+          if (link.includes("github.com")) {
+              if (isWin) {
+                  cmd = `cd /d "${muServerPath}" && git clone ${link} .`;
+              } else {
+                  cmd = `cd "${muServerPath}" && git clone ${link} .`;
+              }
+          } else if (link.endsWith(".zip")) {
+              if (isWin) {
+                  cmd = `cd /d "${muServerPath}" && curl -L -o repack.zip ${link} && tar -xf repack.zip`;
+              } else {
+                  cmd = `cd "${muServerPath}" && curl -L -o repack.zip ${link} && unzip repack.zip`;
+              }
+          } else {
+               // Fallback: Just create a README in the folder since we can't easily auto-download google drive paths or arbitrary forums securely via curl without user tokens.
+               // We will log this to the user.
+               const readmeContent = `The repack ${title} was requested from:\n${link}\n\nPlease download it manually and place contents here if it's a Drive/Mega link format.`;
+               fs.mkdirSync(muServerPath, { recursive: true });
+               fs.writeFileSync(path.join(muServerPath, 'README-INSTALL.txt'), readmeContent);
+               
+               // Attempt to open the link in the browser if possible, but we are a server.
+               return res.json({ success: true, message: "URL is a Drive/Mega or Forum link. Please download manually and extract to " + muServerPath, manual: true });
+          }
+
+          exec(cmd, (err, stdout, stderr) => {
+              if (err) {
+                  return res.status(500).json({ error: err.message, stderr });
+              }
+              res.json({ success: true, message: `Successfully downloaded and installed ${title}.`, stdout });
+          });
+      } catch (err: any) {
+          res.status(500).json({ error: err.message });
+      }
+  });
+
   // DB Config API
   app.get("/api/db-config", (req, res) => {
      res.json({

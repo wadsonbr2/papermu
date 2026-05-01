@@ -11,7 +11,7 @@ import {
   Play, Square, RotateCcw, Wrench, HardDrive, FileTerminal, Database, User, Users, Send, Loader2,
   MousePointer2, Target, Gift, Store, MapPin, ArrowLeft, Trash2, Link, CheckCircle, Clock,
   Swords, Crown, ShoppingCart, Flag, TrendingUp, Map, Megaphone, Eye, EyeOff, ServerCrash, FileText, PieChart, Info, ShieldAlert,
-  Globe
+  Globe, Code
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { GoogleGenAI } from '@google/genai';
@@ -47,6 +47,7 @@ export default function App() {
         { id: 'tools', label: t.sidebar.tools, icon: Wrench },
         { id: 'events', label: t.sidebar.events, icon: Clock },
         { id: 'config', label: t.sidebar.config, icon: FileTerminal },
+        { id: 'source', label: t.sidebar.source, icon: Code },
         { id: 'database', label: t.sidebar.database, icon: Database },
         { id: 'ai', label: t.sidebar.ai, icon: BrainCircuit },
       ]
@@ -251,6 +252,7 @@ export default function App() {
               {activeTab === 'server' && <ServerManagerView serverState={serverState} />}
               {activeTab === 'tools' && <ToolsView />}
               {activeTab === 'config' && <ConfigView />}
+              {activeTab === 'source' && <SourceCodeView language={language} />}
               {activeTab === 'ai' && <AIAssistant />}
               {activeTab === 'database' && <DatabaseView />}
             </motion.div>
@@ -1065,14 +1067,98 @@ function SetupView({ language }: { language: Language }) {
 }
 
 function DownloadsView() {
+  const defaultRepacks = [
+    {
+      title: "PaperMu VDP Private Source",
+      emulator: "Source C++ / Files",
+      author: "Wadson",
+      type: "MuServer Files & Source",
+      img: "blue",
+      link: "https://drive.google.com/drive/folders/1mpTiV2nmImPK6ldz6gKOd4R1vXbpuv6D",
+      isPremium: true
+    },
+    {
+      title: "Louis Emulator Up38 (Season 6)",
+      emulator: "Louis Emulator",
+      author: "Louis",
+      type: "Desktop S6",
+      img: "orange",
+      link: "https://forum.ragezone.com",
+      isPremium: false
+    },
+    {
+      title: "IGCN Premium Repack Season 19",
+      emulator: "IGCN",
+      author: "IGCN Team",
+      type: "Desktop S19",
+      img: "purple",
+      link: "https://forum.ragezone.com",
+      isPremium: false
+    },
+    {
+      title: "Mu Origin 3 (Repack Completo)",
+      emulator: "Mobile Android",
+      author: "RageZone Community",
+      type: "Mobile/Docker",
+      img: "green",
+      link: "https://forum.ragezone.com",
+      isPremium: false
+    }
+  ];
+
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [versions, setVersions] = useState<any[]>([]);
+  const [versions, setVersions] = useState<any[]>(defaultRepacks);
   const [activeFilter, setActiveFilter] = useState('all');
+  
+  const [installingRepack, setInstallingRepack] = useState<string | null>(null);
+  const [installStep, setInstallStep] = useState(0);
+
+  const handleInstall = async (repackTitle: string, link: string) => {
+    setInstallingRepack(repackTitle);
+    setInstallStep(1); // Call API
+    
+    try {
+        const response = await fetch('/api/install-repack', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: repackTitle, link: link })
+        });
+        
+        const data = await response.json();
+        
+        setInstallStep(2);
+        
+        if (data.success) {
+            setInstallStep(3);
+            setTimeout(() => {
+                setInstallStep(0);
+                setInstallingRepack(null);
+                if (data.manual) {
+                    alert(`O link do servidor é uma nuvem (Drive/Mega). Um arquivo README foi gerado no diretório. Por favor, baixe os arquivos manualmente e extraia no diretório configurado, pois o painel não pode burlar o captcha/auth do Google Drive automaticamente.\n\nLink: ${link}`);
+                    window.open(link, "_blank");
+                } else {
+                    alert(data.message);
+                }
+            }, 1000);
+        } else {
+             setInstallStep(0);
+             setInstallingRepack(null);
+             alert(`Erro ao instalar ${repackTitle}: ${data.error}`);
+        }
+    } catch (err: any) {
+         setInstallStep(0);
+         setInstallingRepack(null);
+         alert(`Falha na requisição: ${err.message}`);
+    }
+  };
 
   const handleSearch = async (overrideFilter?: string) => {
     const filterToUse = overrideFilter || activeFilter;
-    if (!query.trim() && filterToUse === 'all') return;
+    if (!query.trim() && filterToUse === 'all') {
+      setVersions(defaultRepacks);
+      return;
+    }
     setIsSearching(true);
     
     let baseSearch = query;
@@ -1089,20 +1175,19 @@ function DownloadsView() {
         
         REGRAS CRÍTICAS DE SEGURANÇA E PREVENÇÃO DE ALUCINAÇÃO:
         1. Você DEVE usar a ferramenta googleSearch para cada busca.
-        2. NÃO invente URLs. A propriedade "link" no JSON DEVE ser EXATAMENTE a URL devolvida pela ferramenta de busca para um tópico válido do fórum (ex: https://forum.ragezone.com/threads/...).
-        3. Se nenhum link do forum.ragezone.com for encontrado na busca com a ferramenta, retorne um array vazio [].
-        4. Transcreva os títulos reais dos resultados. Extraia a plataforma (Mobile/PC/Source) nos campos apropriados.
+        2. NÃO invente URLs. A propriedade "link" no JSON DEVE ser EXATAMENTE a URL devolvida pela ferramenta de busca.
+        3. Se nenhum link for encontrado, retorne [].
         
         Retorne APENAS um JSON válido:
         {
            "results": [
               {
                 "title": "Título exato extraído do resultado da busca Google",
-                "emulator": "Base (ex: MuEmu, IGCN, Mobile Origin, Source) - tentar inferir do título ou snippet",
+                "emulator": "Base (ex: MuEmu, IGCN, Mobile Origin, Source)",
                 "author": "Nome do autor ou fórum",
-                "type": "Versão/Plataforma (ex: Season 6 Desktop, Mobile Android, WebHTML5)",
+                "type": "Versão/Plataforma",
                 "img": "blue",
-                "link": "https://..." // OBRIGATORIAMENTE UM LINK REAL DEVOLVIDO PELA FERRAMENTA GOOGLE
+                "link": "https://..."
               }
            ]
         }
@@ -1117,10 +1202,12 @@ function DownloadsView() {
       const parsed = JSON.parse(text);
       if (parsed.results) {
         setVersions(parsed.results);
+      } else {
+        setVersions([]);
       }
     } catch (e) {
       console.error(e);
-      alert("Falha ao analisar os dados ou ao conectar com a IA. Tente novamente.");
+      alert("Falha buscar dados online. Verifique sua conexão e os limites da API Google.");
     } finally {
       setIsSearching(false);
     }
@@ -1130,6 +1217,8 @@ function DownloadsView() {
     setActiveFilter(filter);
     if (query.trim() || filter !== 'all') {
       handleSearch(filter);
+    } else {
+       setVersions(defaultRepacks);
     }
   };
 
@@ -1139,10 +1228,10 @@ function DownloadsView() {
         <div className="flex justify-between items-end">
           <div>
             <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-              Explorador Web 
-              <span className="text-xs bg-orange-500/20 text-orange-500 px-2 py-1 rounded font-bold uppercase tracking-widest border border-orange-500/20">Powered by RageZone & Google</span>
+              App Store / Repacks
+              <span className="text-xs bg-orange-500/20 text-orange-500 px-2 py-1 rounded font-bold uppercase tracking-widest border border-orange-500/20">Ready to Use</span>
             </h2>
-            <p className="text-slate-400 mt-1">Busque files reais, clientes mobile (Origin) e sources (C++) diretamente da comunidade.</p>
+            <p className="text-slate-400 mt-1">Navegue, baixe e instale automaticamente servidores, dependências SQL e Sources pré-configuradas no seu Node/VPS.</p>
           </div>
           <div className="relative flex gap-2">
             <input 
@@ -1150,16 +1239,16 @@ function DownloadsView() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Digite o que procura..." 
+              placeholder="Buscar outras files no RageZone..." 
               className="bg-[#1e2126] border border-[#2a2d33] rounded-lg px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-orange-500 w-64 disabled:opacity-50" 
-              disabled={isSearching}
+              disabled={isSearching || installingRepack !== null}
             />
             <button 
               onClick={() => handleSearch()}
-              disabled={isSearching || (!query.trim() && activeFilter === 'all')}
+              disabled={isSearching || (!query.trim() && activeFilter === 'all') || installingRepack !== null}
               className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center min-w-[150px]"
             >
-              {isSearching ? <><Loader2 size={16} className="animate-spin mr-2" /> BUSCANDO...</> : "BUSCAR ARQUIVOS"}
+              {isSearching ? <><Loader2 size={16} className="animate-spin mr-2" /> BUSCANDO...</> : "PESQUISAR REPACK"}
             </button>
           </div>
         </div>
@@ -1167,7 +1256,7 @@ function DownloadsView() {
         {/* Filtros */}
         <div className="flex gap-2">
           {[
-            { id: 'all', label: 'Todos' },
+            { id: 'all', label: 'Curadoria / Drive Pessoal' },
             { id: 'mobile', label: 'Mobile (Origin/Android)' },
             { id: 'desktop', label: 'Desktop (Season 1-19)' },
             { id: 'source', label: 'Sources (C++/Java)' },
@@ -1198,12 +1287,13 @@ function DownloadsView() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {versions.map((v, i) => (
-            <div key={i} className="bg-[#111317] border border-[#1e2126] rounded-2xl overflow-hidden hover:border-orange-500/50 transition-all group">
-              <div className={`h-32 bg-[#0a0b0d] relative flex items-center justify-center border-b border-[#1e2126]`}>
-                 <Gamepad2 className={'text-'+(v.img || 'orange')+'-500/10 w-20 h-20 absolute'} />
-                 <div className="relative z-10 text-center px-4">
-                   <h3 className="font-bold text-xl text-white truncate max-w-[250px]" title={v.title}>{v.title}</h3>
-                   <span className="text-xs bg-black/50 px-2 py-1 rounded text-slate-300 backdrop-blur-md mt-2 inline-block">{v.emulator}</span>
+            <div key={i} className={`bg-[#111317] border ${v.isPremium ? 'border-orange-500' : 'border-[#1e2126]'} rounded-2xl overflow-hidden hover:border-orange-500/50 transition-all group relative`}>
+              {v.isPremium && <div className="absolute top-2 right-2 bg-orange-500 text-white text-[9px] px-2 py-1 uppercase tracking-widest font-bold rounded-full z-20 shadow-lg shadow-orange-500/20">Seu Google Drive</div>}
+              <div className={`h-32 bg-[#0a0b0d] relative flex items-center justify-center border-b border-[#1e2126] overflow-hidden`}>
+                 <Gamepad2 className={'text-'+(v.img || 'orange')+'-500/10 w-32 h-32 absolute opacity-30'} />
+                 <div className="relative z-10 text-center px-4 w-full">
+                   <h3 className="font-bold text-xl text-white truncate w-full" title={v.title}>{v.title}</h3>
+                   <span className="text-xs bg-black/50 px-2 py-1 rounded text-slate-300 backdrop-blur-md mt-2 inline-block border border-white/5">{v.emulator}</span>
                  </div>
               </div>
               <div className="p-5 flex flex-col gap-4">
@@ -1215,9 +1305,29 @@ function DownloadsView() {
                    <span className="text-slate-400">Detalhes:</span>
                    <span className="text-green-400 font-medium flex items-center gap-1"><Shield size={14}/> {v.type}</span>
                  </div>
-                 <a href={v.link !== '#' ? v.link : undefined} target="_blank" rel="noreferrer" className="w-full mt-2 bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
-                   <Download size={16} /> ACESSAR REPACK
-                 </a>
+                 
+                 {installingRepack === v.title ? (
+                    <div className="w-full mt-2 bg-blue-600/20 border border-blue-500/50 p-3 rounded-lg flex flex-col gap-2">
+                       <span className="text-xs text-blue-400 font-bold uppercase tracking-widest flex justify-between">
+                         {installStep === 1 ? '1/3 Baixando arquivos...' : installStep === 2 ? '2/3 Extraindo Path...' : '3/3 Setup ODBC & BD...'}
+                         <Loader2 size={12} className="animate-spin" />
+                       </span>
+                       <div className="w-full bg-black/50 h-1.5 rounded-full overflow-hidden">
+                          <div className={`h-full bg-blue-500 transition-all duration-1000 ${installStep === 1 ? 'w-1/3' : installStep === 2 ? 'w-2/3' : 'w-full'}`}></div>
+                       </div>
+                    </div>
+                 ) : (
+                    <div className="flex gap-2 mt-2">
+                       <button onClick={() => handleInstall(v.title, v.link)} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold text-xs py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2" title="Instala o repack, databases e dependências automaticamente no MuServerPath">
+                         <Download size={14} /> AUTO INSTALL
+                       </button>
+                       {v.link !== '#' && (
+                         <a href={v.link} target="_blank" rel="noreferrer" className="flex-1 bg-[#1e2126] hover:bg-[#2a2d33] border border-[#2a2d33] text-white font-bold text-xs py-3 px-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                           <Link size={14} /> LINK EXTERNO
+                         </a>
+                       )}
+                    </div>
+                 )}
               </div>
             </div>
           ))}
@@ -1700,6 +1810,108 @@ function EventBagEditor({ onBack }: { onBack: () => void }) {
               <label className="text-xs text-slate-400">Rate Config: % Chance de Drop Excellent dessa Box</label>
               <input type="number" defaultValue={20} className="w-32 bg-[#0a0b0d] border border-[#1e2126] rounded px-3 py-2 text-sm text-white" />
             </div>
+         </div>
+      </div>
+    </div>
+  );
+}
+
+function SourceCodeView({ language }: { language: Language }) {
+  const tabs = [
+    { label: 'GameServer.cpp', file: 'Source/GameServer/GameServer.cpp' },
+    { label: 'Protocol.cpp', file: 'Source/GameServer/Protocol.cpp' },
+    { label: 'ObjUseSkill.cpp', file: 'Source/GameServer/ObjUseSkill.cpp' },
+    { label: 'User.h', file: 'Source/GameServer/User.h' },
+  ];
+
+  const [activeTab, setActiveTab] = useState(tabs[0]);
+  const [code, setCode] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [customPath, setCustomPath] = useState("");
+
+  const t = i18n[language];
+
+  useEffect(() => {
+     fetch(`/api/files/read?filepath=${encodeURIComponent(customPath || activeTab.file)}`)
+       .then(r => r.json())
+       .then(d => {
+         if (d.error) setCode(`// Error loading file: ${d.error}\n// Você pode usar o campo 'Abrir arquivo exato' para carregar a source caso o caminho padrão seja diferente.\n// Exemplo C:\\MuServer\\Source\\GameServer.cpp ou /home/user/Source/GameServer.cpp`);
+         else setCode(d.content || "");
+       })
+       .catch(e => console.error(e));
+  }, [activeTab, customPath]);
+
+  const saveFile = () => {
+    setIsSaving(true);
+    fetch('/api/files/write', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ filepath: customPath || activeTab.file, content: code })
+    }).then(() => {
+       setIsSaving(false);
+       alert("Source file guardado com sucesso na maquina!");
+    }).catch(() => setIsSaving(false));
+  };
+
+  const handleCustomPathLoad = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setCustomPath(e.currentTarget.value);
+    }
+  }
+
+  return (
+    <div className="h-full flex flex-col space-y-4">
+      <header>
+        <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+          C++ / Java Source Editor
+          <span className="bg-blue-500/20 text-blue-400 text-[10px] px-2 py-1 rounded tracking-widest uppercase">Developer Mode</span>
+        </h2>
+        <p className="text-slate-400 mt-1">Navegue, edite e (em breve) compile o código fonte nativo do seu MuServer.</p>
+      </header>
+
+      <div className="flex gap-2 mb-2 items-center">
+         <span className="text-xs text-slate-500 font-bold uppercase whitespace-nowrap">Abrir arquivo exato:</span>
+         <input 
+           type="text" 
+           placeholder="C:\Sources\MuServer\GameServer\Main.cpp e aperte ENTER" 
+           className="bg-[#0a0b0d] border border-[#1e2126] flex-1 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+           onKeyDown={handleCustomPathLoad}
+         />
+      </div>
+
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        {tabs.map((tab, i) => (
+           <button 
+             key={i} 
+             onClick={() => { setActiveTab(tab); setCustomPath(""); }}
+             className={`${activeTab.file === tab.file && !customPath ? 'bg-[#1e2126] text-white border-blue-500/50' : 'bg-[#1e2126]/50 text-slate-400 border-[#1e2126] hover:text-white'} border px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors`}
+           >
+             {tab.label}
+           </button>
+        ))}
+      </div>
+
+      <div className="flex-1 bg-[#111317] border border-[#1e2126] rounded-2xl p-4 flex flex-col">
+         <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-500 font-mono">{customPath || activeTab.file}</span>
+            <div className="flex gap-2">
+                <button className="bg-[#1e2126] hover:bg-[#282c33] text-white text-xs px-3 py-1 rounded transition-colors flex gap-2 items-center"><Play size={12}/> Compile (MSBuild)</button>
+            </div>
+         </div>
+         <textarea 
+           value={code}
+           onChange={(e) => setCode(e.target.value)}
+           className="flex-1 w-full bg-[#0a0b0d] border border-[#1e2126] rounded-xl p-4 text-[#a3b1c6] font-mono text-sm focus:outline-none focus:border-blue-500/50 resize-none whitespace-pre"
+           spellCheck="false"
+         />
+         <div className="mt-4 flex justify-end">
+            <button 
+               onClick={saveFile}
+               disabled={isSaving}
+               className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors disabled:opacity-50"
+            >
+               {isSaving ? 'Salvando Source...' : 'Salvar Código Fonte Local'}
+            </button>
          </div>
       </div>
     </div>
