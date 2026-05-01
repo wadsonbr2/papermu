@@ -39,7 +39,7 @@ sudo apt-get install -y nodejs
 Ideal for standard MuServer environments working directly on the Windows drives.
 1. Clone or download this project.
    ```bash
-   git clone https://github.com/your-repo/papermu-admin.git
+   git clone https://github.com/wadsonbr/papermu-admin.git
    cd papermu-admin
    ```
 2. Install dependencies and run in production mode:
@@ -55,7 +55,7 @@ Ideal for standard MuServer environments working directly on the Windows drives.
 Run the panel natively on Linux. If using WSL, it can efficiently manage your Windows files from a Linux environment.
 1. Clone the repository and enter the directory:
    ```bash
-   git clone https://github.com/your-repo/papermu-admin.git
+   git clone https://github.com/wadsonbr/papermu-admin.git
    cd papermu-admin
    ```
 2. Install the application and start the server:
