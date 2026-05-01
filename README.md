@@ -39,7 +39,7 @@ sudo apt-get install -y nodejs
 Ideal for standard MuServer environments working directly on the Windows drives.
 1. Clone or download this project.
    ```bash
-   git clone https://github.com/wadsonbr/papermu.git
+   git clone https://github.com/wadsonbr2/papermu.git
    cd papermu
    ```
 2. Install dependencies and run in production mode:
@@ -55,7 +55,7 @@ Ideal for standard MuServer environments working directly on the Windows drives.
 Run the panel natively on Linux. If using WSL, it can efficiently manage your Windows files from a Linux environment.
 1. Clone the repository and enter the directory:
    ```bash
-   git clone https://github.com/wadsonbr/papermu.git
+   git clone https://github.com/wadsonbr2/papermu.git
    cd papermu
    ```
 2. Install the application and start the server:
@@ -69,6 +69,15 @@ Run the panel natively on Linux. If using WSL, it can efficiently manage your Wi
    - **For native Linux:** Set `Caminho` to your Linux server folder (e.g., `/home/user/muserver` or `/opt/papermu`).
    - **For WSL targeting Windows files:** Set `Caminho` to `/mnt/c/MuServer` to manage files on your C: drive directly from the Linux subsystem.
    - Use connection mode `Local/Node FS`.
+
+**Optional: Create global commands (`stamu` & `stomu`)**
+To start and stop the panel from any folder, run these commands inside the `papermu` folder to create terminal aliases:
+```bash
+echo "alias stamu='cd $(pwd) && nohup npm run start > papermu.log 2>&1 & echo \"PaperMu Admin Studio Started!\"'" >> ~/.bashrc
+echo "alias stomu='pkill -f \"server.ts\" && echo \"PaperMu Admin Studio Stopped!\"'" >> ~/.bashrc
+source ~/.bashrc
+```
+Now you can simply type `stamu` in any directory to start the panel, and `stomu` to stop it.
 
 ### 3. Cloud VPS (Linux/Windows) via SSH
 If your MuServer is hosted on an external VPS, you can run this panel locally on your PC and connect to the VPS via SSH.
