@@ -333,6 +333,20 @@ async function startServer() {
      }
   });
 
+  app.post("/api/update", async (req, res) => {
+    try {
+        const cmd = "git pull origin main && npm install && npm run build";
+        exec(cmd, { cwd: process.cwd() }, (err, stdout, stderr) => {
+           if (err) {
+               return res.status(500).json({ error: err.message, stdout, stderr });
+           }
+           res.json({ success: true, message: "Painel atualizado com sucesso!", stdout });
+        });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+  });
+
   // Config API
   app.get("/api/config", (req, res) => {
     res.json({ muServerPath, connectionMode, sshConfig: { ...sshConfig, password: '' } });

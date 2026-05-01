@@ -73,8 +73,8 @@ Run the panel natively on Linux. If using WSL, it can efficiently manage your Wi
 **Optional: Create global commands (`stamu` & `stomu`)**
 To start and stop the panel from any folder, run these commands inside the `papermu` folder to create terminal aliases:
 ```bash
-echo "alias stamu='cd $(pwd) && nohup npm run start > papermu.log 2>&1 & echo \"PaperMu Admin Studio Started!\"'" >> ~/.bashrc
-echo "alias stomu='pkill -f \"server.ts\" && echo \"PaperMu Admin Studio Stopped!\"'" >> ~/.bashrc
+echo "alias stamu='cd $(pwd) && nohup npm run start > papermu.log 2>&1 & echo \"PaperMu Admin Studio Started\"'" >> ~/.bashrc
+echo "alias stomu='pkill -f \"server.ts\" && echo \"PaperMu Admin Studio Stopped\"'" >> ~/.bashrc
 source ~/.bashrc
 ```
 Now you can simply type `stamu` in any directory to start the panel, and `stomu` to stop it.

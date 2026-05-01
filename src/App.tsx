@@ -11,7 +11,7 @@ import {
   Play, Square, RotateCcw, Wrench, HardDrive, FileTerminal, Database, User, Users, Send, Loader2,
   MousePointer2, Target, Gift, Store, MapPin, ArrowLeft, Trash2, Link, CheckCircle, Clock,
   Swords, Crown, ShoppingCart, Flag, TrendingUp, Map, Megaphone, Eye, EyeOff, ServerCrash, FileText, PieChart, Info, ShieldAlert,
-  Globe, Code, FolderArchive
+  Globe, Code, FolderArchive, RefreshCw
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { GoogleGenAI } from '@google/genai';
@@ -26,6 +26,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [serverState, setServerState] = useState<'offline' | 'starting' | 'online'>('offline');
   const [language, setLanguage] = useState<Language>('pt');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const t = i18n[language];
 
@@ -85,6 +86,28 @@ export default function App() {
           fetch('/api/action/start', { method: 'POST' }).then(() => setServerState('online'));
       });
     }
+  };
+
+  const handleUpdatePanel = () => {
+    if(!confirm("Tem certeza que deseja buscar e instalar as últimas atualizações do painel no GitHub? (Isso fará o restart do painel se houver novidades)")) return;
+    setIsUpdating(true);
+    fetch('/api/update', { method: 'POST' })
+      .then(res => res.json())
+      .then(data => {
+         setIsUpdating(false);
+         if (data.success) {
+            alert(data.message + "\\n\\nO painel foi atualizado. Se estiver usando PM2 ou Nohup, ele deve reiniciar sozinho, caso contrário, inicie-o novamente.");
+            // we don't automatically reload depending on how the server is hosted, but lets reload UI to reset state
+            setTimeout(() => window.location.reload(), 2000);
+         } else {
+            alert("Erro ao atualizar: " + data.error);
+            console.error(data);
+         }
+      })
+      .catch(e => {
+         setIsUpdating(false);
+         alert("Erro de conexão ao atualizar: " + e.message);
+      });
   };
 
   return (
@@ -188,6 +211,15 @@ export default function App() {
           >
             <Globe size={14} />
             {language === 'pt' ? 'EN (English)' : 'PT-BR (Português)'}
+          </button>
+          
+          <button 
+            onClick={handleUpdatePanel}
+            disabled={isUpdating}
+            className="w-full flex items-center justify-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 hover:text-blue-300 px-3 py-2 rounded-xl transition-colors font-medium text-xs disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={isUpdating ? "animate-spin" : ""} />
+            {isUpdating ? 'Atualizando...' : 'Atualizar Painel (Update)'}
           </button>
         </div>
       </div>
