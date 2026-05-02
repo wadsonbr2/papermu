@@ -43,6 +43,7 @@ export default function AIAssistant() {
 
       if (aiProvider === 'local') {
         const localUrl = localStorage.getItem('MUSERVER_LOCAL_AI_URL') || 'http://localhost:1234/v1';
+        const localModel = localStorage.getItem('MUSERVER_LOCAL_AI_MODEL') || 'local-model';
         
         const oaiHistory = [
           { role: 'system', content: systemInstruction },
@@ -57,7 +58,7 @@ export default function AIAssistant() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: "local-model",
+            model: localModel,
             messages: oaiHistory,
             temperature: 0.7,
           })

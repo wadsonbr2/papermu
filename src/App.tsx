@@ -1289,11 +1289,12 @@ function DownloadsView() {
 
       if (aiProvider === 'local') {
         const localUrl = localStorage.getItem('MUSERVER_LOCAL_AI_URL') || 'http://localhost:1234/v1';
+        const localModel = localStorage.getItem('MUSERVER_LOCAL_AI_MODEL') || 'local-model';
         const res = await fetch(`${localUrl.replace(/\/$/, '')}/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: "local-model",
+            model: localModel,
             messages: [{
               role: 'user', 
               content: `Você é uma API de busca. Gere um JSON com 3 resultados simulados para servidores de MuOnline buscando por: "${baseSearch.trim()}". Retorne APENAS um JSON válido no formato:\n{"results": [{"title": "Nome do Servidor/Repack", "emulator": "Emulator Base", "author": "Autor", "type": "Versão", "img": "blue", "link": "https://forum.ragezone.com/..."}]}\nNão use markdown ou crases. Retorne apenas JSON direto.`
@@ -2674,12 +2675,14 @@ function SettingsView({ language }: { language: Language }) {
   const [geminiKey, setGeminiKey] = useState(localStorage.getItem('MUSERVER_GEMINI_API_KEY') || '');
   const [aiProvider, setAiProvider] = useState(localStorage.getItem('MUSERVER_AI_PROVIDER') || 'gemini');
   const [localAiUrl, setLocalAiUrl] = useState(localStorage.getItem('MUSERVER_LOCAL_AI_URL') || 'http://localhost:1234/v1');
+  const [localAiModel, setLocalAiModel] = useState(localStorage.getItem('MUSERVER_LOCAL_AI_MODEL') || 'local-model');
   const [success, setSuccess] = useState(false);
 
   const saveSettings = () => {
     localStorage.setItem('MUSERVER_GEMINI_API_KEY', geminiKey);
     localStorage.setItem('MUSERVER_AI_PROVIDER', aiProvider);
     localStorage.setItem('MUSERVER_LOCAL_AI_URL', localAiUrl);
+    localStorage.setItem('MUSERVER_LOCAL_AI_MODEL', localAiModel);
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   };
@@ -2739,18 +2742,33 @@ function SettingsView({ language }: { language: Language }) {
           )}
 
           {aiProvider === 'local' && (
-            <div>
-              <label className="block text-sm font-bold text-slate-400 mb-2">Local AI Base URL</label>
-              <input 
-                type="text" 
-                value={localAiUrl}
-                onChange={(e) => setLocalAiUrl(e.target.value)}
-                placeholder="Ex: http://localhost:1234/v1"
-                className="w-full bg-[#050506] border border-[#1e2126] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 font-mono"
-              />
-              <p className="text-xs text-slate-500 mt-2">
-                {language === 'pt' ? 'Default do LM Studio é http://localhost:1234/v1. Para Ollama use http://localhost:11434/v1' : 'LM Studio default is http://localhost:1234/v1. For Ollama use http://localhost:11434/v1'}
-              </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-400 mb-2">Local AI Base URL</label>
+                <input 
+                  type="text" 
+                  value={localAiUrl}
+                  onChange={(e) => setLocalAiUrl(e.target.value)}
+                  placeholder="Ex: http://localhost:1234/v1"
+                  className="w-full bg-[#050506] border border-[#1e2126] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 font-mono"
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  {language === 'pt' ? 'Default do LM Studio é http://localhost:1234/v1. Para Ollama use http://localhost:11434/v1' : 'LM Studio default is http://localhost:1234/v1. For Ollama use http://localhost:11434/v1'}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-400 mb-2">{language === 'pt' ? 'Modelo (Opcional para LM Studio)' : 'Model (Optional for LM Studio)'}</label>
+                <input 
+                  type="text" 
+                  value={localAiModel}
+                  onChange={(e) => setLocalAiModel(e.target.value)}
+                  placeholder="Ex: local-model, llama3, qwen-2.5-coder"
+                  className="w-full bg-[#050506] border border-[#1e2126] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 font-mono"
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  {language === 'pt' ? 'Para Ollama ou TGI, coloque o nome exato da imagem/modelo. Cuidado: O modelo tem que estar listado no servidor em questão.' : 'For Ollama, you must enter the exact model name. Beware: the model has to be correctly matched.'}
+                </p>
+              </div>
             </div>
           )}
 
