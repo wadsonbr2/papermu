@@ -20,8 +20,6 @@ import AIAssistant from './components/AIAssistant';
 import { i18n, Language } from './i18n';
 import { GoogleGenAI } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [serverState, setServerState] = useState<'offline' | 'starting' | 'online'>('offline');
@@ -45,6 +43,7 @@ export default function App() {
     {
       title: t.sidebar.development,
       items: [
+        { id: 'settings', label: t.sidebar.settings, icon: Settings },
         { id: 'tools', label: t.sidebar.tools, icon: Wrench },
         { id: 'events', label: t.sidebar.events, icon: Clock },
         { id: 'config', label: t.sidebar.config, icon: FileTerminal },
@@ -266,6 +265,7 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="h-full"
             >
+              {activeTab === 'settings' && <SettingsView language={language} />}
               {activeTab === 'dashboard' && <DashboardView setActiveTab={setActiveTab} serverState={serverState} language={language} />}
               {activeTab === 'logs' && <LogsView />}
               {activeTab === 'economy' && <EconomyView />}
@@ -1284,6 +1284,11 @@ function DownloadsView() {
     if (filterToUse === 'repack') baseSearch += " repack muserver pre-configured";
     
     try {
+      const apiKey = localStorage.getItem('MUSERVER_GEMINI_API_KEY');
+      if (!apiKey) {
+        throw new Error("A chave GEMINI_API_KEY não foi configurada. Acesse Configurações do Painel para adicioná-la.");
+      }
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: `Você é uma API de busca estrita especializada em emuladores e servidores de MuOnline e jogos derivados (Mu Origin, Mu Mobile).
@@ -1323,7 +1328,8 @@ function DownloadsView() {
       }
     } catch (e) {
       console.error(e);
-      alert("Falha buscar dados online. Verifique sua conexão e os limites da API Google.");
+      const errorMessage = e instanceof Error ? e.message : "Falha buscar dados online. Verifique sua conexão e os limites da API Google.";
+      alert(errorMessage);
     } finally {
       setIsSearching(false);
     }
@@ -2633,6 +2639,72 @@ function CashShopView() {
                </div>
             ))}
          </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsView({ language }: { language: Language }) {
+  const [geminiKey, setGeminiKey] = useState(localStorage.getItem('MUSERVER_GEMINI_API_KEY') || '');
+  const [success, setSuccess] = useState(false);
+
+  const saveSettings = () => {
+    localStorage.setItem('MUSERVER_GEMINI_API_KEY', geminiKey);
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  };
+
+  return (
+    <div className="p-8 h-full overflow-y-auto">
+      <div className="flex items-center gap-3 mb-8 border-b border-[#1e2126] pb-4">
+        <Settings className="text-orange-500" size={32} />
+        <div>
+          <h2 className="text-3xl font-bold text-white tracking-tight">
+            {language === 'pt' ? 'Configurações do Painel' : 'Panel Settings'}
+          </h2>
+          <p className="text-slate-400 mt-1 max-w-3xl">
+            {language === 'pt' ? 'Ajuste chaves de API, banco de dados e preferências gerais.' : 'Adjust API keys, database, and general preferences.'}
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-2xl bg-[#111216] border border-[#1e2126] rounded-xl p-6">
+        <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
+          <BrainCircuit className="text-blue-500" size={20} /> 
+          {language === 'pt' ? 'Integração com IA (Gemini)' : 'AI Integration (Gemini)'}
+        </h3>
+        
+        <p className="text-sm text-slate-400 mb-6">
+          {language === 'pt' 
+            ? 'Para usar o Assistente Virtual (I.A. para analisar logs ou baixar arquivos) é necessário colocar sua API Key do Google Gemini. Se você não tem, pode gerar gratuitamente na API do Google AI Studio.' 
+            : 'To use the Virtual Assistant (AI for log analysis or file downloads) you must enter your Google Gemini API Key. If you do not have one, you can generate it for free at Google AI Studio.'}
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-slate-400 mb-2">Google Gemini API Key</label>
+            <input 
+              type="password" 
+              value={geminiKey}
+              onChange={(e) => setGeminiKey(e.target.value)}
+              placeholder="Ex: AIzaSyB2..."
+              className="w-full bg-[#050506] border border-[#1e2126] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 font-mono"
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <button 
+              onClick={saveSettings}
+              className="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-lg font-bold transition-all disabled:opacity-50"
+            >
+              {language === 'pt' ? 'Salvar Configurações' : 'Save Settings'}
+            </button>
+          </div>
+          
+          {success && <p className="text-green-400 text-sm font-bold mt-2">
+            {language === 'pt' ? 'Configurações salvas com sucesso!' : 'Settings saved successfully!'}
+          </p>}
+        </div>
       </div>
     </div>
   );

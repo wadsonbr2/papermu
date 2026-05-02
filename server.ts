@@ -546,13 +546,13 @@ async function startServer() {
           } catch(e) {}
 
           if (isWslCheck) {
-            command = `cmd.exe /C start ${url}`;
+            command = `cmd.exe /C "start msedge --app=${url} || start chrome --app=${url} || start ${url}"`;
           } else if (platform === 'win32') {
-            command = `start ${url}`;
+            command = `cmd.exe /C "start msedge --app=${url} || start chrome --app=${url} || start ${url}"`;
           } else if (platform === 'darwin') {
-            command = `open ${url}`;
+            command = `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --app=${url} || open ${url}`;
           } else {
-            command = `xdg-open ${url}`;
+            command = `google-chrome --app=${url} || xdg-open ${url}`;
           }
           exec(command, () => {});
         } catch (e) {

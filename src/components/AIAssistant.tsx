@@ -4,8 +4,6 @@ import { GoogleGenAI } from '@google/genai';
 import Markdown from 'react-markdown';
 import { Send, Loader2, Bot, User } from 'lucide-react';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 export default function AIAssistant() {
   const [messages, setMessages] = useState<{ role: 'user' | 'model'; text: string }[]>([
     {
@@ -39,6 +37,11 @@ export default function AIAssistant() {
         parts: [{ text: m.text }]
       }));
 
+      const apiKey = localStorage.getItem('MUSERVER_GEMINI_API_KEY');
+      if (!apiKey) {
+        throw new Error("A chave GEMINI_API_KEY não foi configurada. Acesse Configurações do Painel para adicioná-la.");
+      }
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [
@@ -54,7 +57,8 @@ export default function AIAssistant() {
       setMessages(prev => [...prev, { role: 'model', text: response.text || 'Ocorreu um erro ao gerar a resposta.' }]);
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'model', text: 'Desculpe, ocorreu um erro ao conectar com o serviço de IA. Verifique sua chave da API.' }]);
+      const errorMessage = error instanceof Error ? error.message : 'Desculpe, ocorreu um erro ao conectar com o serviço. Verifique sua chave API nas Configurações.';
+      setMessages(prev => [...prev, { role: 'model', text: errorMessage }]);
     } finally {
       setIsLoading(false);
     }
