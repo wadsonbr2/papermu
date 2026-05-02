@@ -307,15 +307,19 @@ async function startServer() {
          let cmd = "";
          const isWin = targetOs === 'windows' || (targetOs === 'auto' && os.platform() === 'win32');
          const isDocker = method === 'docker';
+         const isLocalDB = method === 'localdb';
 
          if (isDocker) {
             cmd = `docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=${saPassword}" -p 1433:1433 --name mssql-server-mu -d mcr.microsoft.com/mssql/server:2019-latest`;
+         } else if (isLocalDB && isWin) {
+            // Usa o Invoke-WebRequest para baixar apenas o LocalDB (Portable ~50MB) e instalar silenciosamente
+            cmd = `powershell -Command "Write-Output 'Downloading SQL LocalDB (Portable)...'; Invoke-WebRequest -Uri 'https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi' -OutFile 'SqlLocalDB.msi'; Write-Output 'Installing LocalDB...'; Start-Process -Wait -FilePath 'msiexec.exe' -ArgumentList '/i', 'SqlLocalDB.msi', '/qn', 'IACCEPTSQLSERVERLICENSETERMS=YES' -NoNewWindow"`;
          } else if (isWin) {
             // Usa o Invoke-WebRequest para baixar o SQL Express e rodar silencioso
             cmd = `powershell -Command "Write-Output 'Downloading SQL Express...'; Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/?linkid=866658' -OutFile 'sqlexpress.exe'; Write-Output 'Installing SQL Express Silently...'; Start-Process -Wait -FilePath '.\\sqlexpress.exe' -ArgumentList '/q', '/ACTION=Install', '/FEATURES=SQLEngine', '/INSTANCENAME=SQLEXPRESS', '/SQLSVCACCOUNT=\\"NT AUTHORITY\\Network Service\\"', '/SQLSYSADMINACCOUNTS=\\"BUILTIN\\ADMINISTRATORS\\"', '/AGTSVCACCOUNT=\\"NT AUTHORITY\\Network Service\\"', '/IACCEPTSQLSERVERLICENSETERMS', '/SECURITYMODE=SQL', '/SAPWD=\\"${saPassword}\\"' -NoNewWindow"`;
          } else {
-            // Linux Apt
-            cmd = `wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add - && sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/20.04/mssql-server-2019.list)" && sudo apt-get update && sudo apt-get install -y mssql-server && sudo MSSQL_SA_PASSWORD="${saPassword}" ACCEPT_EULA="Y" /opt/mssql/bin/mssql-conf -n setup`;
+            // Linux Apt (updated to avoid apt-key which is deprecated)
+            cmd = `curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc > /dev/null && curl -fsSL https://packages.microsoft.com/config/ubuntu/20.04/mssql-server-2019.list | sudo tee /etc/apt/sources.list.d/mssql-server-2019.list > /dev/null && sudo apt-get update && sudo apt-get install -y mssql-server && sudo MSSQL_SA_PASSWORD="${saPassword}" ACCEPT_EULA="Y" /opt/mssql/bin/mssql-conf -n setup`;
          }
 
          if (connectionMode === 'remote') {

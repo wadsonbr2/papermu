@@ -27,6 +27,7 @@ export const i18n = {
       spots: 'Mapas & Spots',
       shops: 'Lojas NPCs',
       cloud: 'Cloud & Deploy',
+      workspaces: 'Instâncias (Workspace)',
       explorer: 'Explorador Web',
       setup: 'Nodes, VPS & Setup',
       browser: 'Jogar no Browser'
@@ -105,6 +106,7 @@ export const i18n = {
       spots: 'Map & Spots',
       shops: 'NPC Shops',
       cloud: 'Cloud & Deploy',
+      workspaces: 'Server Workspaces',
       explorer: 'Web Explorer',
       setup: 'Nodes, VPS & Setup',
       browser: 'Play in Browser'

@@ -66,6 +66,7 @@ export default function App() {
     {
       title: t.sidebar.cloud,
       items: [
+        { id: 'workspaces', label: t.sidebar.workspaces, icon: Server },
         { id: 'downloads', label: t.sidebar.explorer, icon: Download },
         { id: 'bridge', label: t.sidebar.setup, icon: Target },
         { id: 'webclient', label: t.sidebar.browser, icon: Gamepad2 },
@@ -265,6 +266,7 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="h-full"
             >
+              {activeTab === 'workspaces' && <WorkspacesView language={language} setActiveTab={setActiveTab} />}
               {activeTab === 'settings' && <SettingsView language={language} />}
               {activeTab === 'dashboard' && <DashboardView setActiveTab={setActiveTab} serverState={serverState} language={language} />}
               {activeTab === 'logs' && <LogsView />}
@@ -1123,7 +1125,8 @@ function SetupView({ language }: { language: Language }) {
                   <div>
                      <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Método</label>
                      <div className="flex gap-2">
-                         <button onClick={() => setSqlInstallMethod('native')} className={`flex-1 py-2 px-2 text-[10px] uppercase font-bold rounded border ${sqlInstallMethod === 'native' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-[#050506] border-[#1e2126] text-slate-400'}`}>Nativo (Windows/Linux)</button>
+                         <button onClick={() => setSqlInstallMethod('native')} className={`flex-1 py-2 px-2 text-[10px] uppercase font-bold rounded border ${sqlInstallMethod === 'native' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-[#050506] border-[#1e2126] text-slate-400'}`}>Full (Win/Linux)</button>
+                         <button onClick={() => setSqlInstallMethod('localdb')} className={`flex-1 py-2 px-2 text-[10px] uppercase font-bold rounded border ${sqlInstallMethod === 'localdb' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-[#050506] border-[#1e2126] text-slate-400'}`}>LocalDB (Portable)</button>
                          <button onClick={() => setSqlInstallMethod('docker')} className={`flex-1 py-2 px-2 text-[10px] uppercase font-bold rounded border ${sqlInstallMethod === 'docker' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-[#050506] border-[#1e2126] text-slate-400'}`}>Docker/Container</button>
                      </div>
                   </div>
@@ -2134,26 +2137,77 @@ function ConfigView() {
 }
 
 function DatabaseView() {
+  const [query, setQuery] = useState("UPDATE Character SET cLevel = 400 WHERE Name = 'Admin'");
+  const [output, setOutput] = useState("");
+  const [isExecuting, setIsExecuting] = useState(false);
+
+  const executeQuery = async (sqlString: string, successMsg?: string) => {
+    setIsExecuting(true);
+    setOutput("Executando...");
+    try {
+      const res = await fetch('/api/db/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: sqlString })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      let outText = successMsg ? `[SUCESSO] ${successMsg}\n\n` : '';
+      if (data.rowsAffected && data.rowsAffected.length > 0) {
+        outText += `Linhas Afetadas: ${data.rowsAffected.join(', ')}\n`;
+      }
+      if (data.result) {
+        outText += `\nResultados:\n${JSON.stringify(data.result, null, 2)}`;
+      }
+      setOutput(outText);
+    } catch (e: any) {
+      setOutput(`[ERRO]: ${e.message}`);
+    } finally {
+       setIsExecuting(false);
+    }
+  };
+
+  const handleShrink = () => {
+    if(confirm("Tem certeza que deseja limpar os logs (Shrink) do banco de dados MuOnline?")) {
+      executeQuery(`DBCC SHRINKDATABASE (N'MuOnline')`, 'Banco de dados reduzido e logs limpos com sucesso!');
+    }
+  };
+
+  const handleReset = () => {
+    if(confirm("CUIDADO: Isso vai zerar o nível (cLevel = 1) e os Resets de TODOS os personagens! Tem certeza absoluta?")) {
+      executeQuery(`UPDATE Character SET cLevel = 1, ResetCount = 0, Experience = 0`, 'Todos os personagens foram resetados para Nível 1, 0 Resets.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header className="mb-8">
         <h2 className="text-3xl font-bold text-white tracking-tight">Banco de Dados (SQL)</h2>
-        <p className="text-slate-400 mt-1">Execute Queries, gerencie contas e limpe logs.</p>
+        <p className="text-slate-400 mt-1">Execute Queries, gerencie contas e limpe logs em tempo real na Database do servidor.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-[#111317] border border-[#1e2126] rounded-2xl p-6">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Ações de Manutenção</h3>
+        <div className="bg-[#111317] border border-[#1e2126] rounded-2xl p-6 flex flex-col">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Ações de Manutenção (Real-time)</h3>
           <div className="space-y-3">
-             <button className="w-full bg-[#1e2126] hover:bg-[#2a2d33] text-left text-sm text-slate-300 p-4 rounded-lg transition-colors flex justify-between items-center group">
-                MDB: Restaurar MuOnline.bak <Download size={16} className="text-slate-500 group-hover:text-orange-400" />
+             <button disabled className="opacity-50 w-full bg-[#1e2126] text-left text-sm text-slate-400 p-4 rounded-lg flex justify-between items-center">
+                MDB: Restaurar MuOnline.bak (Use o Script Manager) <Download size={16} />
              </button>
-             <button className="w-full bg-[#1e2126] hover:bg-[#2a2d33] text-left text-sm text-slate-300 p-4 rounded-lg transition-colors flex justify-between items-center group">
+             <button 
+                onClick={handleShrink} 
+                className="w-full bg-[#1e2126] hover:bg-[#2a2d33] text-left text-sm text-slate-300 p-4 rounded-lg transition-colors flex justify-between items-center group">
                 Limpar Logs (Shrink Database) <TerminalSquare size={16} className="text-slate-500 group-hover:text-orange-400" />
              </button>
-             <button className="w-full bg-red-900/20 hover:bg-red-900/40 text-left text-sm text-red-400 p-4 rounded-lg border border-red-900/30 transition-colors flex justify-between items-center group">
-                Resetar Personagens (Geral) <Shield size={16} className="text-red-500/50 group-hover:text-red-500" />
+             <button 
+                onClick={handleReset} 
+                className="w-full bg-red-900/20 hover:bg-red-900/40 text-left text-sm text-red-400 p-4 rounded-lg border border-red-900/30 transition-colors flex justify-between items-center group">
+                Resetar Personagens (Geral/Full Reset) <Shield size={16} className="text-red-500/50 group-hover:text-red-500" />
              </button>
+          </div>
+          
+          <div className="mt-6 flex-1 bg-[#050506] border border-[#1e2126] rounded-lg p-4 font-mono text-[10px] text-slate-400 overflow-y-auto whitespace-pre-wrap max-h-[150px]">
+            {output || "// A saída (output) das execuções aparecerá aqui..."}
           </div>
         </div>
 
@@ -2161,12 +2215,15 @@ function DatabaseView() {
           <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Query Executor</h3>
           <textarea 
             aria-label="SQL Query"
-            className="flex-1 w-full bg-[#0a0b0d] border border-[#1e2126] rounded-lg p-4 text-orange-400 font-mono text-xs focus:outline-none focus:border-orange-500"
-            placeholder="UPDATE Character SET cLevel = 400 WHERE Name = 'Admin'"
-            defaultValue="UPDATE Character SET cLevel = 400 WHERE Name = 'Admin'"
+            className="flex-1 w-full bg-[#0a0b0d] border border-[#1e2126] rounded-lg p-4 text-orange-400 font-mono text-xs focus:outline-none focus:border-orange-500 min-h-[200px]"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
           />
-          <button className="mt-4 bg-orange-600 hover:bg-orange-500 text-white font-bold text-sm py-3 rounded-lg flex justify-center items-center gap-2 transition-colors">
-            <Play size={16} /> EXECUTAR QUERY
+          <button 
+             onClick={() => executeQuery(query)}
+             disabled={isExecuting}
+             className="mt-4 bg-orange-600 hover:bg-orange-500 text-white font-bold text-sm py-3 rounded-lg flex justify-center items-center gap-2 transition-colors disabled:opacity-50">
+            <Play size={16} /> {isExecuting ? "EXECUTANDO..." : "EXECUTAR QUERY"}
           </button>
         </div>
       </div>
@@ -2666,6 +2723,135 @@ function CashShopView() {
                </div>
             ))}
          </div>
+      </div>
+    </div>
+  );
+}
+
+function WorkspacesView({ language, setActiveTab }: { language: Language, setActiveTab: (tab: string) => void }) {
+  const [workspaces, setWorkspaces] = useState<Array<{ id: string, name: string, path: string }>>(() => {
+    const saved = localStorage.getItem('MUSERVER_WORKSPACES');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [activePath, setActivePath] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newPath, setNewPath] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then(r => r.json())
+      .then(d => setActivePath(d.muServerPath || ""))
+      .catch(e => console.error(e));
+  }, []);
+
+  const saveWorkspaces = (newWorkspaces: Array<{ id: string, name: string, path: string }>) => {
+    setWorkspaces(newWorkspaces);
+    localStorage.setItem('MUSERVER_WORKSPACES', JSON.stringify(newWorkspaces));
+  };
+
+  const addWorkspace = () => {
+    if (!newName || !newPath) return;
+    const newWs = { id: Date.now().toString(), name: newName, path: newPath };
+    saveWorkspaces([...workspaces, newWs]);
+    setNewName('');
+    setNewPath('');
+    setIsAdding(false);
+  };
+
+  const deleteWorkspace = (id: string) => {
+    saveWorkspaces(workspaces.filter(w => w.id !== id));
+  };
+
+  const activateWorkspace = async (path: string) => {
+    try {
+      await fetch('/api/config', { 
+         method: 'POST', 
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ muServerPath: path })
+      });
+      setActivePath(path);
+      alert(language === 'pt' ? 'Workspace alterado com sucesso! Recomendamos dar reload/atualizar o painel.' : 'Workspace changed successfully! We recommend reloading the panel.');
+    } catch(e) {
+      console.error(e);
+    }
+  };
+
+  return (
+    <div className="p-8 h-full overflow-y-auto">
+      <div className="flex justify-between items-end mb-8 border-b border-[#1e2126] pb-4">
+        <div>
+          <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+            <FolderArchive className="text-orange-500" size={32} />
+            {language === 'pt' ? 'Gerenciador de Workspaces' : 'Workspace Manager'}
+          </h2>
+          <p className="text-slate-400 mt-1 max-w-3xl">
+            {language === 'pt' ? 'Importe, crie e alterne entre diferentes pastas de servidores (Files/Repacks).' : 'Import, create and switch between different servers folders (Files/Repacks).'}
+          </p>
+        </div>
+        <button onClick={() => setIsAdding(!isAdding)} className="bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors">
+          <FolderArchive size={16} /> {language === 'pt' ? 'Adicionar Workspace' : 'Add Workspace'}
+        </button>
+      </div>
+
+      {isAdding && (
+        <div className="bg-[#111216] border border-[#1e2126] rounded-xl p-6 mb-6">
+          <h3 className="text-lg font-bold text-white mb-4">{language === 'pt' ? 'Novo Workspace' : 'New Workspace'}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-xs text-slate-500 font-bold uppercase block mb-1">Nome (ex: Season 6 X-Team)</label>
+              <input type="text" value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-[#050506] border border-[#1e2126] text-white p-2 rounded focus:outline-none focus:border-orange-500" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 font-bold uppercase block mb-1">Caminho do Servidor (ex: C:\MuServer ou /mnt/c/MuServer)</label>
+              <input type="text" value={newPath} onChange={e => setNewPath(e.target.value)} className="w-full bg-[#050506] border border-[#1e2126] text-white p-2 font-mono rounded focus:outline-none focus:border-orange-500" />
+            </div>
+          </div>
+          <button onClick={addWorkspace} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded transition-colors">{language === 'pt' ? 'Salvar Importação' : 'Save Import'}</button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {workspaces.map(ws => (
+          <div key={ws.id} className={`bg-[#111216] border ${activePath === ws.path ? 'border-orange-500' : 'border-[#1e2126]'} rounded-xl p-6 flex flex-col`}>
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-white truncate pr-2">{ws.name}</h3>
+              {activePath === ws.path && <span className="text-[10px] bg-orange-500/20 text-orange-500 font-bold px-2 py-1 rounded uppercase flex-shrink-0">Ativo</span>}
+            </div>
+            <div title={ws.path} className="font-mono text-xs text-slate-400 bg-[#050506] px-3 py-2 rounded border border-[#1e2126] mb-4 truncate">{ws.path}</div>
+            
+            {activePath === ws.path && (
+              <button 
+                 onClick={() => setActiveTab('bridge')}
+                 className="w-full mb-4 bg-[#1e2126] hover:bg-[#2a2d33] text-slate-300 font-bold py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors text-xs border border-[#2a2d33]"
+              >
+                <Database size={14} /> 
+                {language === 'pt' ? 'Configurar DB e Dependências' : 'Setup DB & Dependencies'}
+              </button>
+            )}
+
+            <div className="mt-auto flex gap-2">
+              <button 
+                onClick={() => activateWorkspace(ws.path)} 
+                disabled={activePath === ws.path} 
+                className={`flex-1 py-2 font-bold text-xs rounded transition-colors ${activePath === ws.path ? 'bg-[#1e2126] text-slate-500 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-500 text-white'}`}>
+                {activePath === ws.path ? (language === 'pt' ? 'Atualmente Selecionado' : 'Currently Selected') : (language === 'pt' ? 'Carregar Este Workspace' : 'Load Workspace')}
+              </button>
+              <button onClick={() => deleteWorkspace(ws.id)} className="px-3 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded flex items-center justify-center transition-colors">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        ))}
+        {workspaces.length === 0 && !isAdding && (
+          <div className="col-span-full py-16 text-center border border-dashed border-[#1e2126] rounded-xl flex flex-col items-center justify-center text-slate-500 bg-[#111216]/50">
+            <FolderArchive size={48} className="mb-4 opacity-50" />
+            <p className="mb-2">{language === 'pt' ? 'Nenhuma pasta ou importação configurada ainda.' : 'No folders or imports configured yet.'}</p>
+            <button onClick={() => setIsAdding(true)} className="text-orange-500 hover:text-orange-400 underline mt-2 transition-colors">
+              {language === 'pt' ? 'Clique aqui para adicionar sua primeira pasta (Workspace)' : 'Click here to add your first folder (Workspace)'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
