@@ -529,7 +529,37 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    const url = `http://localhost:${PORT}`;
+    console.log(`Server running on ${url}`);
+    
+    // Auto-open browser when running locally (not in AI Studio sandbox)
+    if (!process.env.CLOUD_RUN_JOB && !process.env.HOSTNAME) {
+      setTimeout(() => {
+        const platform = os.platform();
+        let command;
+        
+        try {
+          // Check for WSL safely
+          let isWslCheck = false;
+          try {
+             isWslCheck = fs.readFileSync('/proc/version', 'utf8').toLowerCase().includes('microsoft');
+          } catch(e) {}
+
+          if (isWslCheck) {
+            command = `cmd.exe /C start ${url}`;
+          } else if (platform === 'win32') {
+            command = `start ${url}`;
+          } else if (platform === 'darwin') {
+            command = `open ${url}`;
+          } else {
+            command = `xdg-open ${url}`;
+          }
+          exec(command, () => {});
+        } catch (e) {
+          // ignore
+        }
+      }, 1000);
+    }
   });
 }
 
