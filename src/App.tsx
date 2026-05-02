@@ -14,13 +14,10 @@ import {
   Globe, Code, FolderArchive, RefreshCw
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
-import { GoogleGenAI } from '@google/genai';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Box as ThreeBox, Text, Environment, ContactShadows, Float, useGLTF } from '@react-three/drei';
 import AIAssistant from './components/AIAssistant';
 import { i18n, Language } from './i18n';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
