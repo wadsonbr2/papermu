@@ -12,6 +12,20 @@ Built to run anywhere, PaperMu connects directly to your server architecture nat
 - **MSSQL & Database Integration:** Execute queries, manage accounts, and view live database stats natively through ODBC/SQL drivers.
 - **AI-Powered Diagnostics:** Detect crashes and configuration errors instantly using integrated AI logs analysis.
 
+## 🧠 AI Integration (Cloud & Local)
+
+PaperMu features artificial intelligence integrations to help you manage, setup, and troubleshoot your server.
+
+**Features:**
+- **AI Log Analyzer:** Paste JoinServer or GameServer logs, and the AI will analyze the reason for crashes or disconnect problems.
+- **Source Code & Scripts AI:** Get suggestions on query setups and config file formats.
+
+**Supported AI Providers:**
+- **Google Gemini (Cloud):** The default provider. Requires a Free API key from Google AI Studio.
+- **Local AI (LM Studio / Ollama):** Run completely offline on your own PC! PaperMu connects to the OpenAI-compatible local server URL (e.g., `http://localhost:1234/v1` for LM Studio, or `http://localhost:11434/v1` for Ollama). This means zero data leaves your machine.
+
+You can configure your chosen AI provider in the **Settings** menu found in the application sidebar!
+
 ## 🛠 Installation Guide & Prerequisites
 
 PaperMu is a full-stack Node.js application (React + Express + Vite). It can be installed anywhere Node.js runs.

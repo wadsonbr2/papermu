@@ -1284,43 +1284,69 @@ function DownloadsView() {
     if (filterToUse === 'repack') baseSearch += " repack muserver pre-configured";
     
     try {
-      const apiKey = localStorage.getItem('MUSERVER_GEMINI_API_KEY');
-      if (!apiKey) {
-        throw new Error("A chave GEMINI_API_KEY não foi configurada. Acesse Configurações do Painel para adicioná-la.");
+      const aiProvider = localStorage.getItem('MUSERVER_AI_PROVIDER') || 'gemini';
+      let text = '';
+
+      if (aiProvider === 'local') {
+        const localUrl = localStorage.getItem('MUSERVER_LOCAL_AI_URL') || 'http://localhost:1234/v1';
+        const res = await fetch(`${localUrl.replace(/\/$/, '')}/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: "local-model",
+            messages: [{
+              role: 'user', 
+              content: `Você é uma API de busca. Gere um JSON com 3 resultados simulados para servidores de MuOnline buscando por: "${baseSearch.trim()}". Retorne APENAS um JSON válido no formato:\n{"results": [{"title": "Nome do Servidor/Repack", "emulator": "Emulator Base", "author": "Autor", "type": "Versão", "img": "blue", "link": "https://forum.ragezone.com/..."}]}\nNão use markdown ou crases. Retorne apenas JSON direto.`
+            }],
+            temperature: 0.1,
+          })
+        });
+        if (!res.ok) throw new Error(`Erro na API Local (${res.status}). Verifique o LM Studio.`);
+        const data = await res.json();
+        text = data.choices?.[0]?.message?.content || '';
+      } else {
+        const apiKey = localStorage.getItem('MUSERVER_GEMINI_API_KEY');
+        if (!apiKey) {
+          throw new Error("A chave GEMINI_API_KEY não foi configurada. Acesse Configurações do Painel para adicioná-la.");
+        }
+        const ai = new GoogleGenAI({ apiKey });
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: `Você é uma API de busca estrita especializada em emuladores e servidores de MuOnline e jogos derivados (Mu Origin, Mu Mobile).
+          USE A FERRAMENTA GOOGLE SEARCH OBRIGATORIAMENTE para buscar: "site:forum.ragezone.com ${baseSearch.trim()}".
+          
+          REGRAS CRÍTICAS DE SEGURANÇA E PREVENÇÃO DE ALUCINAÇÃO:
+          1. Você DEVE usar a ferramenta googleSearch para cada busca.
+          2. NÃO invente URLs. A propriedade "link" no JSON DEVE ser EXATAMENTE a URL devolvida pela ferramenta de busca.
+          3. Se nenhum link for encontrado, retorne [].
+          
+          Retorne APENAS um JSON válido:
+          {
+             "results": [
+                {
+                  "title": "Título exato extraído do resultado da busca Google",
+                  "emulator": "Base (ex: MuEmu, IGCN, Mobile Origin, Source)",
+                  "author": "Nome do autor ou fórum",
+                  "type": "Versão/Plataforma",
+                  "img": "blue",
+                  "link": "https://..."
+                }
+             ]
+          }
+          Não use markdown, devolva apenas a string JSON.`,
+          config: {
+            tools: [{ googleSearch: {} }],
+            temperature: 0.1,
+          }
+        });
+        text = response.text || '';
       }
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: `Você é uma API de busca estrita especializada em emuladores e servidores de MuOnline e jogos derivados (Mu Origin, Mu Mobile).
-        USE A FERRAMENTA GOOGLE SEARCH OBRIGATORIAMENTE para buscar: "site:forum.ragezone.com ${baseSearch.trim()}".
-        
-        REGRAS CRÍTICAS DE SEGURANÇA E PREVENÇÃO DE ALUCINAÇÃO:
-        1. Você DEVE usar a ferramenta googleSearch para cada busca.
-        2. NÃO invente URLs. A propriedade "link" no JSON DEVE ser EXATAMENTE a URL devolvida pela ferramenta de busca.
-        3. Se nenhum link for encontrado, retorne [].
-        
-        Retorne APENAS um JSON válido:
-        {
-           "results": [
-              {
-                "title": "Título exato extraído do resultado da busca Google",
-                "emulator": "Base (ex: MuEmu, IGCN, Mobile Origin, Source)",
-                "author": "Nome do autor ou fórum",
-                "type": "Versão/Plataforma",
-                "img": "blue",
-                "link": "https://..."
-              }
-           ]
-        }
-        Não use markdown, devolva apenas a string JSON.`,
-        config: {
-          tools: [{ googleSearch: {} }],
-          temperature: 0.1,
-        }
-      });
-      let text = response.text || '';
+
       text = text.replace(/```json/g, '').replace(/```/g, '');
-      const parsed = JSON.parse(text);
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const cleanJsonStr = jsonMatch ? jsonMatch[0] : text;
+      
+      const parsed = JSON.parse(cleanJsonStr);
       if (parsed.results) {
         setVersions(parsed.results);
       } else {
@@ -1508,8 +1534,8 @@ function ServerManagerView({ serverState }: { serverState: string }) {
       <div className="bg-[#111317] border border-blue-500/30 rounded-2xl p-6 shadow-[0_0_20px_rgba(59,130,246,0.05)] mt-6">
          <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2"><BrainCircuit size={20} className="text-blue-400" /> Analisador de Logs por IA (Gemini)</h3>
-                <p className="text-sm text-slate-400">Cole o log de erro do GameServer ou JoinServer para o Gemini analisar e sugerir a correção.</p>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2"><BrainCircuit size={20} className="text-blue-400" /> Analisador de Logs por IA (Cloud/Local)</h3>
+                <p className="text-sm text-slate-400">Cole o log de erro do GameServer ou JoinServer para a Inteligência Artificial analisar e sugerir a correção.</p>
              </div>
              <div className="text-xs font-mono bg-blue-500/20 text-blue-300 px-3 py-1 rounded border border-blue-500/30">Auto-Detect: Ativado</div>
          </div>
@@ -2646,10 +2672,14 @@ function CashShopView() {
 
 function SettingsView({ language }: { language: Language }) {
   const [geminiKey, setGeminiKey] = useState(localStorage.getItem('MUSERVER_GEMINI_API_KEY') || '');
+  const [aiProvider, setAiProvider] = useState(localStorage.getItem('MUSERVER_AI_PROVIDER') || 'gemini');
+  const [localAiUrl, setLocalAiUrl] = useState(localStorage.getItem('MUSERVER_LOCAL_AI_URL') || 'http://localhost:1234/v1');
   const [success, setSuccess] = useState(false);
 
   const saveSettings = () => {
     localStorage.setItem('MUSERVER_GEMINI_API_KEY', geminiKey);
+    localStorage.setItem('MUSERVER_AI_PROVIDER', aiProvider);
+    localStorage.setItem('MUSERVER_LOCAL_AI_URL', localAiUrl);
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   };
@@ -2671,28 +2701,60 @@ function SettingsView({ language }: { language: Language }) {
       <div className="max-w-2xl bg-[#111216] border border-[#1e2126] rounded-xl p-6">
         <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
           <BrainCircuit className="text-blue-500" size={20} /> 
-          {language === 'pt' ? 'Integração com IA (Gemini)' : 'AI Integration (Gemini)'}
+          {language === 'pt' ? 'Integração com IA' : 'AI Integration'}
         </h3>
         
         <p className="text-sm text-slate-400 mb-6">
           {language === 'pt' 
-            ? 'Para usar o Assistente Virtual (I.A. para analisar logs ou baixar arquivos) é necessário colocar sua API Key do Google Gemini. Se você não tem, pode gerar gratuitamente na API do Google AI Studio.' 
-            : 'To use the Virtual Assistant (AI for log analysis or file downloads) you must enter your Google Gemini API Key. If you do not have one, you can generate it for free at Google AI Studio.'}
+            ? 'Configure o Assistente de Inteligência Artificial. Você pode usar a nuvem (Google Gemini) ou uma I.A. Local rodando no seu próprio PC através do LM Studio, Ollama, etc.' 
+            : 'Configure the Artificial Intelligence Assistant. You can use the cloud (Google Gemini) or a Local AI running on your own PC via LM Studio, Ollama, etc.'}
         </p>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-slate-400 mb-2">Google Gemini API Key</label>
-            <input 
-              type="password" 
-              value={geminiKey}
-              onChange={(e) => setGeminiKey(e.target.value)}
-              placeholder="Ex: AIzaSyB2..."
-              className="w-full bg-[#050506] border border-[#1e2126] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 font-mono"
-            />
+            <label className="block text-sm font-bold text-slate-400 mb-2">
+              {language === 'pt' ? 'Provedor de I.A.' : 'AI Provider'}
+            </label>
+            <select
+              value={aiProvider}
+              onChange={(e) => setAiProvider(e.target.value)}
+              className="w-full bg-[#050506] border border-[#1e2126] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+            >
+              <option value="gemini">Google Gemini (Cloud)</option>
+              <option value="local">LM Studio / Ollama (OpenAI API Local)</option>
+            </select>
           </div>
 
-          <div className="flex gap-4">
+          {aiProvider === 'gemini' && (
+            <div>
+              <label className="block text-sm font-bold text-slate-400 mb-2">Google Gemini API Key</label>
+              <input 
+                type="password" 
+                value={geminiKey}
+                onChange={(e) => setGeminiKey(e.target.value)}
+                placeholder="Ex: AIzaSyB2..."
+                className="w-full bg-[#050506] border border-[#1e2126] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 font-mono"
+              />
+            </div>
+          )}
+
+          {aiProvider === 'local' && (
+            <div>
+              <label className="block text-sm font-bold text-slate-400 mb-2">Local AI Base URL</label>
+              <input 
+                type="text" 
+                value={localAiUrl}
+                onChange={(e) => setLocalAiUrl(e.target.value)}
+                placeholder="Ex: http://localhost:1234/v1"
+                className="w-full bg-[#050506] border border-[#1e2126] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 font-mono"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                {language === 'pt' ? 'Default do LM Studio é http://localhost:1234/v1. Para Ollama use http://localhost:11434/v1' : 'LM Studio default is http://localhost:1234/v1. For Ollama use http://localhost:11434/v1'}
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-4 pt-4">
             <button 
               onClick={saveSettings}
               className="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-lg font-bold transition-all disabled:opacity-50"

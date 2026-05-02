@@ -8,6 +8,7 @@ import { exec } from "child_process";
 import os from "os";
 import sql from "mssql";
 import { Client } from "ssh2";
+import killPort from "kill-port";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -528,39 +529,62 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    const url = `http://localhost:${PORT}`;
-    console.log(`Server running on ${url}`);
-    
-    // Auto-open browser when running locally (not in AI Studio sandbox)
-    if (!process.env.CLOUD_RUN_JOB && !process.env.HOSTNAME) {
-      setTimeout(() => {
-        const platform = os.platform();
-        let command;
-        
-        try {
-          // Check for WSL safely
-          let isWslCheck = false;
-          try {
-             isWslCheck = fs.readFileSync('/proc/version', 'utf8').toLowerCase().includes('microsoft');
-          } catch(e) {}
+  // Automate killing any leftover process on this port before starting
+  await killPort(PORT, 'tcp').catch(() => {});
 
-          if (isWslCheck) {
-            command = `cmd.exe /C "start msedge --app=${url} || start chrome --app=${url} || start ${url}"`;
-          } else if (platform === 'win32') {
-            command = `cmd.exe /C "start msedge --app=${url} || start chrome --app=${url} || start ${url}"`;
-          } else if (platform === 'darwin') {
-            command = `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --app=${url} || open ${url}`;
-          } else {
-            command = `google-chrome --app=${url} || xdg-open ${url}`;
+  let currentPort = PORT;
+
+  const startListening = () => {
+    app.listen(currentPort, "0.0.0.0", () => {
+      const url = `http://localhost:${currentPort}`;
+      console.log(`Server running on ${url}`);
+      
+      // Auto-open browser when running locally (not in AI Studio sandbox)
+      if (!process.env.CLOUD_RUN_JOB && !process.env.HOSTNAME) {
+        setTimeout(() => {
+          const platform = os.platform();
+          let command;
+          
+          try {
+            // Check for WSL safely
+            let isWslCheck = false;
+            try {
+               isWslCheck = fs.readFileSync('/proc/version', 'utf8').toLowerCase().includes('microsoft');
+            } catch(e) {}
+
+            if (isWslCheck) {
+              command = `cmd.exe /C "start msedge --app=${url} || start chrome --app=${url} || start ${url}"`;
+            } else if (platform === 'win32') {
+              command = `cmd.exe /C "start msedge --app=${url} || start chrome --app=${url} || start ${url}"`;
+            } else if (platform === 'darwin') {
+              command = `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --app=${url} || open ${url}`;
+            } else {
+              command = `google-chrome --app=${url} || xdg-open ${url}`;
+            }
+            exec(command, () => {});
+          } catch (e) {
+            // ignore
           }
-          exec(command, () => {});
-        } catch (e) {
-          // ignore
+        }, 1000);
+      }
+    }).on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        const isAIStudio = !!process.env.CLOUD_RUN_JOB || !!process.env.HOSTNAME;
+        if (!isAIStudio) {
+          console.log(`Port ${currentPort} is in use, trying ${currentPort + 1}...`);
+          currentPort++;
+          startListening();
+        } else {
+          console.error(`Port ${currentPort} is required by AI Studio and is in use.`);
+          process.exit(1);
         }
-      }, 1000);
-    }
-  });
+      } else {
+        console.error('Server error:', err);
+      }
+    });
+  };
+
+  startListening();
 }
 
 startServer();

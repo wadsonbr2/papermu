@@ -37,24 +37,58 @@ export default function AIAssistant() {
         parts: [{ text: m.text }]
       }));
 
-      const apiKey = localStorage.getItem('MUSERVER_GEMINI_API_KEY');
-      if (!apiKey) {
-        throw new Error("A chave GEMINI_API_KEY não foi configurada. Acesse Configurações do Painel para adicioná-la.");
-      }
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-            ...history,
-            { role: 'user', parts: [{ text: userText }] }
-        ],
-        config: {
-          systemInstruction: "Você é um Especialista Master em desenvolvimento Muserver (Mu Online). Você sabe tudo sobre versões 97d, Season 2, Season 6, Season 15+, arquivos Louis Emulator, IGCN, MuEmu e TitanTech. Ajude o administrador a editar arquivos (commonserver.cfg, Message.wtf, Item.txt), montar queries SQL, configurar drops, spots, shops, rates de chaos machine e resolver problemas complexos (crash de GS, disconnect). Use tom profissional e direto, retornando scripts de código, dicas práticas e tabelas quando necessário.",
-          temperature: 0.7,
-        }
-      });
+      const aiProvider = localStorage.getItem('MUSERVER_AI_PROVIDER') || 'gemini';
+      let responseText = '';
+      const systemInstruction = "Você é um Especialista Master em desenvolvimento Muserver (Mu Online). Você sabe tudo sobre versões 97d, Season 2, Season 6, Season 15+, arquivos Louis Emulator, IGCN, MuEmu e TitanTech. Ajude o administrador a editar arquivos (commonserver.cfg, Message.wtf, Item.txt), montar queries SQL, configurar drops, spots, shops, rates de chaos machine e resolver problemas complexos (crash de GS, disconnect). Use tom profissional e direto, retornando scripts de código, dicas práticas e tabelas quando necessário.";
 
-      setMessages(prev => [...prev, { role: 'model', text: response.text || 'Ocorreu um erro ao gerar a resposta.' }]);
+      if (aiProvider === 'local') {
+        const localUrl = localStorage.getItem('MUSERVER_LOCAL_AI_URL') || 'http://localhost:1234/v1';
+        
+        const oaiHistory = [
+          { role: 'system', content: systemInstruction },
+          ...messages.map(m => ({
+             role: m.role === 'model' ? 'assistant' : 'user',
+             content: m.text
+          })),
+          { role: 'user', content: userText }
+        ];
+
+        const res = await fetch(`${localUrl.replace(/\/$/, '')}/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: "local-model",
+            messages: oaiHistory,
+            temperature: 0.7,
+          })
+        });
+
+        if (!res.ok) {
+           throw new Error(`Erro na API Local (${res.status}): Verifique se o LM Studio/Ollama está rodando e CORS está ativado.`);
+        }
+        const data = await res.json();
+        responseText = data.choices?.[0]?.message?.content || '';
+      } else {
+        const apiKey = localStorage.getItem('MUSERVER_GEMINI_API_KEY');
+        if (!apiKey) {
+          throw new Error("A chave GEMINI_API_KEY não foi configurada. Acesse Configurações do Painel para adicioná-la.");
+        }
+        const ai = new GoogleGenAI({ apiKey });
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+              ...history,
+              { role: 'user', parts: [{ text: userText }] }
+          ],
+          config: {
+            systemInstruction,
+            temperature: 0.7,
+          }
+        });
+        responseText = response.text || '';
+      }
+
+      setMessages(prev => [...prev, { role: 'model', text: responseText || 'Ocorreu um erro ao gerar a resposta.' }]);
     } catch (error) {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : 'Desculpe, ocorreu um erro ao conectar com o serviço. Verifique sua chave API nas Configurações.';
