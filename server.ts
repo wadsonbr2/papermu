@@ -15,13 +15,28 @@ const __dirname = path.dirname(__filename);
 // Helper to get real path. Defaults to WSL/Windows path, or local folder for sandbox.
 let muServerPath = process.env.MUSERVER_PATH || (os.platform() === 'win32' ? "C:\\MuServer" : "/mnt/c/MuServer");
 
-// Database configuration state
+// Detect Windows host IP automatically if running in WSL
+let detectedHost = process.env.DB_HOST || 'localhost';
+try {
+    const isWsl = fs.readFileSync('/proc/version', 'utf8').toLowerCase().includes('microsoft');
+    if (isWsl && typeof process.env.DB_HOST === 'undefined') {
+        const resolv = fs.readFileSync('/etc/resolv.conf', 'utf8');
+        const match = resolv.match(/nameserver\s+([0-9.]+)/);
+        if (match && match[1]) {
+            detectedHost = match[1];
+            console.log(`[Auto-Detect] WSL detectado - Configurando o IP do Database para Windows Host: ${detectedHost}`);
+        }
+    }
+} catch(e) {}
+
 // Database configuration state
 let dbConfig = {
   user: 'sa',
-  password: 'your_password',
-  server: process.env.DB_HOST || 'localhost',
+  password: '',
+  server: detectedHost,
   database: 'MuOnline',
+  requestTimeout: 5000,
+  connectionTimeout: 3000,
   options: {
     encrypt: false, // For local dev
     trustServerCertificate: true 
