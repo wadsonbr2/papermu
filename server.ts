@@ -8,7 +8,6 @@ import { exec } from "child_process";
 import os from "os";
 import sql from "mssql";
 import { Client } from "ssh2";
-import killPort from "kill-port";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -528,9 +527,6 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
-
-  // Automate killing any leftover process on this port before starting
-  await killPort(PORT, 'tcp').catch(() => {});
 
   let currentPort = PORT;
 
